@@ -35,6 +35,7 @@
   }
   .leaflet-control-attribution a { color: var(--stein) !important; }
 
+  /* ---------- toppfelt ---------- */
   .topp {
     position: absolute; top: 0; left: 0; right: 0; z-index: 500;
     padding: 8px 8px 10px;
@@ -52,28 +53,37 @@
     display: block; font-family: var(--data); font-size: 14px; line-height: 1.15;
     letter-spacing: -.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  .chip span {
+  .chip span.et {
     display: block; font-family: var(--kond); font-weight: 700; font-size: 9px;
     letter-spacing: .1em; text-transform: uppercase; color: var(--stein);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
   .chip.sekk b { color: var(--sol); }
   .chip.svak b { color: var(--fare); }
+  #sekkPil { display: none; margin-right: 3px; transform-origin: 50% 55%; }
 
-  .varsel {
-    margin-top: 8px; pointer-events: auto; background: rgba(196,97,75,.14);
-    border: 1px solid rgba(196,97,75,.5); border-radius: 10px; padding: 10px 12px;
-    font-size: 12.5px; line-height: 1.45; display: none;
+  .stripe {
+    margin-top: 8px; pointer-events: auto; border-radius: 10px; padding: 8px 10px;
+    font-size: 12.5px; line-height: 1.4; display: none; align-items: center; gap: 8px;
+    background: rgba(27,42,36,.94); border: 1px solid rgba(237,240,234,.14);
   }
-  .varsel.vis { display: block; }
-  .varsel b { color: var(--fare); }
-  .varsel button {
-    margin-top: 8px; width: 100%; padding: 9px; border-radius: 8px; cursor: pointer;
+  .stripe.vis { display: flex; }
+  .stripe .tekst { flex: 1; min-width: 0; font-family: var(--data); font-size: 12.5px; }
+  .stripe button {
+    padding: 7px 10px; border-radius: 8px; cursor: pointer; flex: 0 0 auto;
     border: 1px solid rgba(237,240,234,.2); background: var(--skygge-2); color: var(--papir);
-    font-family: var(--kond); font-weight: 700; font-size: 12px;
+    font-family: var(--kond); font-weight: 700; font-size: 11px;
     text-transform: uppercase; letter-spacing: .05em;
   }
+  .stripe button.primar { background: var(--lyng-dyp); border-color: var(--lyng); }
+  .stripe button.fare { color: var(--fare); }
+  #varsel { background: rgba(196,97,75,.14); border-color: rgba(196,97,75,.5); display: none; }
+  #varsel.vis { display: block; }
+  #varsel b { color: var(--fare); }
+  #solStripe .tekst { color: var(--sol); }
+  #solStripe.morkt .tekst { color: var(--fare); }
 
+  /* ---------- knapperad ---------- */
   .rail {
     position: absolute; left: 0; right: 0; bottom: 0; z-index: 500;
     padding: 14px 8px 10px;
@@ -97,20 +107,53 @@
     display: flex; flex-direction: column; gap: 6px;
   }
   .verktoy button {
-    width: 44px; height: 44px; border-radius: 12px; border: 1px solid rgba(237,240,234,.12);
-    background: rgba(27,42,36,.93); color: var(--papir); font-size: 18px; cursor: pointer;
+    width: 42px; height: 42px; border-radius: 12px; border: 1px solid rgba(237,240,234,.12);
+    background: rgba(27,42,36,.93); color: var(--papir); font-size: 17px; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
   }
   .verktoy button.pa { background: var(--lyng-dyp); border-color: var(--lyng); }
   .verktoy button:active { transform: scale(.93); }
 
+  /* ---------- bunnark ---------- */
+  .ark {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 1100;
+    background: var(--skygge-2); border-top: 1px solid rgba(237,240,234,.14);
+    border-radius: 18px 18px 0 0; padding: 16px 16px 22px; display: none;
+  }
+  .ark.apen { display: block; }
+  .ark h4 { margin: 0 0 12px; font-family: var(--kond); font-weight: 700; font-size: 15px; text-transform: uppercase; letter-spacing: .06em; }
+  .ark .valg { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+  .ark .valg button {
+    padding: 13px 8px; border-radius: 11px; border: 1px solid rgba(237,240,234,.14);
+    background: var(--skygge); color: var(--papir); cursor: pointer;
+    font-family: var(--kond); font-weight: 700; font-size: 12.5px;
+    text-transform: uppercase; letter-spacing: .04em;
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+  }
+  .ark .valg button .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .ark input {
+    width: 100%; background: var(--skygge); color: var(--papir);
+    border: 1px solid rgba(237,240,234,.18); border-radius: 10px; padding: 12px;
+    font-size: 16px; font-family: var(--data); margin-bottom: 10px;
+  }
+  .ark .to { display: flex; gap: 7px; }
+  .ark .to button {
+    flex: 1; padding: 13px; border-radius: 11px; border: 1px solid rgba(237,240,234,.16);
+    background: var(--skygge); color: var(--papir); cursor: pointer;
+    font-family: var(--kond); font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: .05em;
+  }
+  .ark .to button.primar { background: var(--lyng-dyp); border-color: var(--lyng); }
+  .ark .to button.fare { color: var(--fare); }
+
+  /* ---------- panel ---------- */
   .panel {
     position: absolute; inset: 0; z-index: 1200; background: var(--skygge);
     padding: 20px 18px; overflow-y: auto; display: none;
   }
   .panel.apen { display: block; }
   .panel h2 { font-family: var(--kond); font-weight: 700; font-size: 23px; margin: 0 0 4px; }
-  .panel p.hjelp { color: var(--stein); font-size: 12.5px; margin: 0 0 20px; line-height: 1.5; }
+  .panel h2 .ver { font-size: 12px; color: var(--stein); font-family: var(--data); font-weight: 500; margin-left: 6px; }
+  .panel p.hjelp { color: var(--stein); font-size: 12.5px; margin: 0 0 18px; line-height: 1.5; }
   .rad { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid rgba(237,240,234,.09); }
   .rad label { font-size: 14px; }
   .rad small { display: block; color: var(--stein); font-size: 11.5px; margin-top: 2px; }
@@ -131,7 +174,34 @@
     font-family: var(--kond); font-size: 10.5px; font-weight: 700; letter-spacing: .14em;
     text-transform: uppercase; color: var(--stein); margin: 0 0 4px;
   }
+  .liste { border-top: 1px solid rgba(237,240,234,.09); }
+  .liste .el { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid rgba(237,240,234,.09); font-size: 13px; }
+  .liste .el .info { flex: 1; min-width: 0; }
+  .liste .el .info b { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .liste .el .info small { color: var(--stein); font-family: var(--data); font-size: 11px; }
+  .liste .el button {
+    padding: 8px 11px; border-radius: 8px; border: 1px solid rgba(237,240,234,.16);
+    background: var(--skygge-2); color: var(--papir); font-size: 11px; cursor: pointer;
+    font-family: var(--kond); font-weight: 700; text-transform: uppercase;
+  }
+  .liste .el button.fare { color: var(--fare); }
+  .liste .tom { color: var(--stein); font-size: 12.5px; padding: 11px 0; }
 
+  /* ---------- koordinatskjerm ---------- */
+  .koord {
+    position: absolute; inset: 0; z-index: 1300; background: var(--skygge);
+    display: none; flex-direction: column; justify-content: center; align-items: center;
+    text-align: center; padding: 24px; cursor: pointer;
+  }
+  .koord.apen { display: flex; }
+  .koord .et { font-family: var(--kond); font-weight: 700; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--stein); margin-bottom: 14px; }
+  .koord .stor { font-family: var(--data); font-size: 34px; line-height: 1.35; letter-spacing: -.5px; }
+  .koord .ddm { font-family: var(--data); font-size: 17px; color: var(--mose); margin-top: 16px; line-height: 1.5; }
+  .koord .noy { font-family: var(--data); font-size: 14px; color: var(--stein); margin-top: 18px; }
+  .koord .nod { margin-top: 34px; font-size: 13px; color: var(--fare); font-weight: 600; }
+  .koord .lukk { margin-top: 8px; font-size: 11.5px; color: var(--stein); }
+
+  /* ---------- popup ---------- */
   .leaflet-popup-content-wrapper { background: var(--skygge-2); color: var(--papir); border-radius: 12px; }
   .leaflet-popup-tip { background: var(--skygge-2); }
   .leaflet-popup-content { margin: 12px 14px; font-size: 13px; }
@@ -143,22 +213,25 @@
     border: 1px solid rgba(237,240,234,.16); border-radius: 8px; padding: 8px; font-size: 13px;
   }
   .pop-felt input.liter { flex: 0 0 58px; font-family: var(--data); }
-  .pop-knapper { display: flex; gap: 6px; }
+  .pop-knapper { display: flex; gap: 6px; flex-wrap: wrap; }
   .pop-knapper button {
-    flex: 1; padding: 9px; border-radius: 8px; border: 1px solid rgba(237,240,234,.16);
-    background: var(--skygge); color: var(--papir); font-size: 11.5px; cursor: pointer;
-    font-family: var(--kond); font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+    flex: 1 1 45%; padding: 9px 6px; border-radius: 8px; border: 1px solid rgba(237,240,234,.16);
+    background: var(--skygge); color: var(--papir); font-size: 11px; cursor: pointer;
+    font-family: var(--kond); font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
   }
   .pop-knapper button.slett { color: var(--fare); }
 
+  .puls { width: 16px; height: 16px; border-radius: 50%; background: var(--sol); border: 2px solid var(--papir); animation: puls 1.2s ease-out infinite; }
+  @keyframes puls { 0% { box-shadow: 0 0 0 0 rgba(217,164,65,.7); } 100% { box-shadow: 0 0 0 22px rgba(217,164,65,0); } }
+
   .brod {
-    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 950;
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 1050;
     background: var(--skygge-2); border: 1px solid rgba(237,240,234,.16); border-radius: 12px;
     padding: 13px 18px; font-size: 13.5px; text-align: center; opacity: 0; pointer-events: none;
-    transition: opacity .25s ease; max-width: 78vw;
+    transition: opacity .25s ease; max-width: 80vw;
   }
   .brod.vis { opacity: 1; }
-  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 </head>
 <body>
@@ -168,19 +241,31 @@
 <div class="topp">
   <div class="dekning"><i id="dekningBar"></i></div>
   <div class="chips">
-    <div class="chip" id="chipGps"><b id="vGps">søker</b><span>nøyaktighet</span></div>
-    <div class="chip"><b id="vAreal">0 %</b><span>dekket i synsfelt</span></div>
-    <div class="chip"><b id="vDist">0,0</b><span>gått km</span></div>
-    <div class="chip sekk" id="chipSekk" style="display:none"><b id="vSekk">—</b><span>til sekken</span></div>
+    <div class="chip" id="chipGps" style="cursor:pointer"><b id="vGps">søker</b><span class="et">nøyaktighet</span></div>
+    <div class="chip"><b id="vAreal">0 %</b><span class="et">dekket i synsfelt</span></div>
+    <div class="chip"><b id="vDist">0,0</b><span class="et">gått km</span></div>
+    <div class="chip sekk" id="chipSekk" style="display:none;cursor:pointer"><b><span id="sekkPil">▲</span><span id="vSekk">—</span></b><span class="et" id="etSekk">til sekken</span></div>
   </div>
-  <div class="varsel" id="varsel">
-    <b>Ingen GPS her.</b> <span id="varselTekst"></span>
+  <div class="stripe" id="solStripe"><div class="tekst" id="solTekst"></div></div>
+  <div class="stripe" id="benchBar">
+    <div class="tekst" id="benchTekst">⏱ 0:00</div>
+    <button class="primar" id="btnBenchFerdig">Ferdig</button>
+    <button class="fare" id="btnBenchAvbryt">Avbryt</button>
   </div>
+  <div class="stripe" id="soneBar">
+    <div class="tekst" id="soneTekst">Sone</div>
+    <button id="btnSoneAngre">Angre</button>
+    <button class="primar" id="btnSoneFerdig">Ferdig</button>
+    <button class="fare" id="btnSoneAvbryt">✕</button>
+  </div>
+  <div class="stripe" id="varsel"><div><b>Ingen GPS.</b> <span id="varselTekst"></span></div></div>
 </div>
 
 <div class="verktoy">
   <button id="btnFolg" class="pa" title="Følg posisjon">◎</button>
   <button id="btnTaake" class="pa" title="Tåke av/på">☁</button>
+  <button id="btnBench" title="Start måling">⏱</button>
+  <button id="btnSone" title="Ny plukksone">⬡</button>
   <button id="btnLag" title="Bytt kartlag">▤</button>
   <button id="btnMeny" title="Meny">☰</button>
 </div>
@@ -192,9 +277,31 @@
   <button data-type="sekk"><span class="dot" style="background:#D9A441"></span>Sekk</button>
 </div>
 
+<div class="ark" id="ark"></div>
+
+<div class="koord" id="koord">
+  <div class="et">Din posisjon</div>
+  <div class="stor" id="koordStor">—</div>
+  <div class="ddm" id="koordDdm"></div>
+  <div class="noy" id="koordNoy"></div>
+  <div class="nod">Ved nød: ring 113 og les opp tallene øverst</div>
+  <div class="lukk">Trykk hvor som helst for å lukke</div>
+</div>
+
 <div class="panel" id="panel">
-  <h2>Innstillinger</h2>
+  <h2>Innstillinger<span class="ver">v3</span></h2>
   <p class="hjelp" id="lagringStatus"></p>
+
+  <div class="seksjon">
+    <h3>Soner</h3>
+    <div class="liste" id="soneListe"></div>
+  </div>
+
+  <div class="seksjon">
+    <h3>Målinger</h3>
+    <p class="hjelp" id="benchOppsummering" style="margin-bottom:6px"></p>
+    <div class="liste" id="benchListe"></div>
+  </div>
 
   <div class="seksjon">
     <h3>Sporing</h3>
@@ -219,6 +326,8 @@
   <div class="seksjon">
     <h3>Vis</h3>
     <div class="rad"><label>Tåke</label><select id="setFog"><option value="1">På</option><option value="0">Av</option></select></div>
+    <div class="rad"><label>Plukkerate<small>Farger målte områder etter l/t</small></label><select id="setRate"><option value="1">På</option><option value="0">Av</option></select></div>
+    <div class="rad"><label>Soner</label><select id="setSoner"><option value="1">På</option><option value="0">Av</option></select></div>
     <div class="rad"><label>Gålinje</label><select id="setTrack"><option value="1">På</option><option value="0">Av</option></select></div>
     <div class="rad">
       <label>Sesong<small>Lyngen står på samme sted år etter år</small></label>
@@ -247,20 +356,28 @@
 "use strict";
 
 /* ============================================================
-   1. Lagring — window.storage i artefakt, localStorage ellers
+   1. Tilstand og lagring
    ============================================================ */
 const NOKKEL = "lyng:data";
 const FARGER = {
   funn:   { farge: "#7B8CC4", navn: "Bær her" },
   senere: { farge: "#A8C08A", navn: "Kom tilbake" },
   tomt:   { farge: "#8A9490", navn: "Tomt" },
-  sekk:   { farge: "#D9A441", navn: "Sekken" }
+  sekk:   { farge: "#D9A441", navn: "Sekken" },
+  myr:    { farge: "#5B7A8C", navn: "Myr" },
+  kratt:  { farge: "#7A6A4F", navn: "Kratt" },
+  bratt:  { farge: "#C4614B", navn: "For bratt" }
 };
-const standard = { grid: 12, radius: 15, acc: 35, wake: 1, fog: 1, track: 1, lag: "topo", lat0: null, aar: "alle" };
+const standard = {
+  grid: 12, radius: 15, acc: 35, wake: 1, fog: 1, track: 1,
+  rate: 1, soner: 1, lag: "topo", lat0: null, aar: "alle"
+};
 
 let S = Object.assign({}, standard);
-let celler = new Map();
-let merker = [];
+let celler = new Map();      // "x,y" -> siste år
+let merker = [];             // {id,type,lat,lng,t,liter,notat}
+let soner = [];              // {id,navn,pkt:[[lat,lng]...],t}
+let bench = [];              // {id,t0,t1,liter,metode,dist,celler:[],lat,lng}
 let spor = [];
 let distanse = 0;
 let sisteFix = null;
@@ -271,16 +388,15 @@ function pakk() {
   const perAar = {};
   for (const [k, aar] of celler) (perAar[aar] = perAar[aar] || []).push(k);
   return JSON.stringify({
-    S, merker, distanse, celler: perAar,
+    S, merker, soner, bench, distanse, celler: perAar,
     spor: spor.map(p => [ +p[0].toFixed(6), +p[1].toFixed(6), p[2] ])
   });
 }
 
-async function skrivRaa(tekst) {
-  if (window.storage && window.storage.set) { await window.storage.set(NOKKEL, tekst); return; }
-  localStorage.setItem(NOKKEL, tekst);
+async function skrivRaa(t) {
+  if (window.storage && window.storage.set) { await window.storage.set(NOKKEL, t); return; }
+  localStorage.setItem(NOKKEL, t);
 }
-
 async function lesRaa() {
   if (window.storage && window.storage.get) {
     const r = await window.storage.get(NOKKEL);
@@ -308,9 +424,8 @@ function lagre() {
 }
 
 function visLagringStatus() {
-  const el = document.getElementById("lagringStatus");
-  el.textContent = lagringVirker === false
-    ? "Kan ikke lagre her. Turen din finnes bare så lenge denne fanen er åpen — ta GPX-eksport før du lukker."
+  document.getElementById("lagringStatus").textContent = lagringVirker === false
+    ? "Kan ikke lagre her. Turen finnes bare så lenge fanen er åpen — ta GPX-eksport før du lukker."
     : "Tåken forsvinner der du har gått. Alt lagres på enheten din.";
 }
 
@@ -323,6 +438,8 @@ async function lastInn() {
     S = Object.assign({}, standard, d.S || {});
     merker = d.merker || [];
     for (const m of merker) if (m.type === "bil") m.type = "sekk";  // gammelt navn
+    soner = d.soner || [];
+    bench = d.bench || [];
     spor = d.spor || [];
     distanse = d.distanse || 0;
     celler = new Map();
@@ -331,8 +448,10 @@ async function lastInn() {
 }
 
 /* ============================================================
-   2. Rutenett i Web Mercator-meter, korrigert for breddegrad
+   2. Geometri: rutenett, polygon, forenkling
    ============================================================ */
+const MERC = L.CRS.EPSG3857;
+
 function cellStorrelse() {
   const lat = S.lat0 == null ? 59.5 : S.lat0;
   return S.grid / Math.cos(lat * Math.PI / 180);
@@ -340,22 +459,69 @@ function cellStorrelse() {
 
 function merkBesokt(lat, lng, radius) {
   const cs = cellStorrelse();
-  const rMerc = radius / Math.cos((S.lat0 == null ? lat : S.lat0) * Math.PI / 180);
-  const p = L.CRS.EPSG3857.project(L.latLng(lat, lng));
-  const x0 = Math.floor((p.x - rMerc) / cs), x1 = Math.floor((p.x + rMerc) / cs);
-  const y0 = Math.floor((p.y - rMerc) / cs), y1 = Math.floor((p.y + rMerc) / cs);
+  const rM = radius / Math.cos((S.lat0 == null ? lat : S.lat0) * Math.PI / 180);
+  const p = MERC.project(L.latLng(lat, lng));
+  const x0 = Math.floor((p.x - rM) / cs), x1 = Math.floor((p.x + rM) / cs);
+  const y0 = Math.floor((p.y - rM) / cs), y1 = Math.floor((p.y + rM) / cs);
   const aar = new Date().getFullYear();
   for (let x = x0; x <= x1; x++) {
     for (let y = y0; y <= y1; y++) {
       const sx = (x + 0.5) * cs - p.x, sy = (y + 0.5) * cs - p.y;
-      if (sx * sx + sy * sy > rMerc * rMerc) continue;
-      celler.set(x + "," + y, aar);
+      if (sx * sx + sy * sy > rM * rM) continue;
+      const k = x + "," + y;
+      celler.set(k, aar);
+      if (benchAktiv) benchAktiv.celler.add(k);
     }
   }
 }
 
+function cellSenter(k) {
+  const i = k.indexOf(",");
+  const cs = cellStorrelse();
+  return MERC.unproject(L.point((+k.slice(0, i) + 0.5) * cs, (+k.slice(i + 1) + 0.5) * cs));
+}
+
+// stråletest, lat/lng rett fram — små områder, godt nok
+function iPolygon(lat, lng, pkt) {
+  let inne = false;
+  for (let i = 0, j = pkt.length - 1; i < pkt.length; j = i++) {
+    const yi = pkt[i][0], xi = pkt[i][1], yj = pkt[j][0], xj = pkt[j][1];
+    if ((yi > lat) !== (yj > lat) && lng < (xj - xi) * (lat - yi) / (yj - yi) + xi) inne = !inne;
+  }
+  return inne;
+}
+
+// Ramer–Douglas–Peucker i mercator-meter
+function forenkle(pkt, tolM) {
+  if (pkt.length < 4) return pkt.slice();
+  const P = pkt.map(p => MERC.project(L.latLng(p[0], p[1])));
+  const behold = new Array(P.length).fill(false);
+  behold[0] = behold[P.length - 1] = true;
+  const stakk = [[0, P.length - 1]];
+  while (stakk.length) {
+    const [a, b] = stakk.pop();
+    let maks = 0, mi = -1;
+    const ax = P[a].x, ay = P[a].y, dx = P[b].x - ax, dy = P[b].y - ay;
+    const len2 = dx * dx + dy * dy || 1e-9;
+    for (let i = a + 1; i < b; i++) {
+      const t = Math.max(0, Math.min(1, ((P[i].x - ax) * dx + (P[i].y - ay) * dy) / len2));
+      const ex = ax + t * dx - P[i].x, ey = ay + t * dy - P[i].y;
+      const d = Math.sqrt(ex * ex + ey * ey);
+      if (d > maks) { maks = d; mi = i; }
+    }
+    if (maks > tolM && mi > 0) { behold[mi] = true; stakk.push([a, mi], [mi, b]); }
+  }
+  return pkt.filter((_, i) => behold[i]);
+}
+
+function polySenter(pkt) {
+  let la = 0, ln = 0;
+  for (const p of pkt) { la += p[0]; ln += p[1]; }
+  return [la / pkt.length, ln / pkt.length];
+}
+
 /* ============================================================
-   3. Kart
+   3. Kart og lag
    ============================================================ */
 const LAG = {
   topo:       { navn: "Topografisk", url: "https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png" },
@@ -378,6 +544,7 @@ function byttLag() {
   lagre();
 }
 
+/* ---- tåke + plukkerate på samme canvas ---- */
 const Taake = L.Layer.extend({
   onAdd(m) {
     this._map = m;
@@ -390,7 +557,6 @@ const Taake = L.Layer.extend({
     m.on("zoomend", this._avsluttAnim, this);
     this._plasser();
   },
-  // Under animert zoom skalerer vi canvaset med kartet i stedet for å tegne på nytt.
   _animer(e) {
     this._animerer = true;
     const skala = this._map.getZoomScale(e.zoom, this._zoom);
@@ -426,32 +592,49 @@ const Taake = L.Layer.extend({
     ctx.filter = "none";
     ctx.globalCompositeOperation = "source-over";
     ctx.clearRect(0, 0, st.x, st.y);
-    if (!S.fog) return;
-    ctx.fillStyle = "rgba(16,26,22,0.74)";
-    ctx.fillRect(0, 0, st.x, st.y);
 
     const cs = cellStorrelse();
     const b = this._map.getBounds().pad(0.12);
-    const sv = L.CRS.EPSG3857.project(b.getSouthWest());
-    const no = L.CRS.EPSG3857.project(b.getNorthEast());
+    const sv = MERC.project(b.getSouthWest());
+    const no = MERC.project(b.getNorthEast());
     const xMin = Math.floor(sv.x / cs) - 1, xMax = Math.floor(no.x / cs) + 1;
     const yMin = Math.floor(sv.y / cs) - 1, yMax = Math.floor(no.y / cs) + 1;
     const filterAar = S.aar === "alle" ? null : +S.aar;
-
-    ctx.globalCompositeOperation = "destination-out";
-    ctx.filter = "blur(5px)";
-    ctx.fillStyle = "#000";
-    for (const [k, aar] of celler) {
-      if (filterAar !== null && aar !== filterAar) continue;
+    const rekt = k => {
       const i = k.indexOf(",");
       const cx = +k.slice(0, i), cy = +k.slice(i + 1);
-      if (cx < xMin || cx > xMax || cy < yMin || cy > yMax) continue;
-      const nv = this._map.latLngToContainerPoint(L.CRS.EPSG3857.unproject(L.point(cx * cs, (cy + 1) * cs)));
-      const so = this._map.latLngToContainerPoint(L.CRS.EPSG3857.unproject(L.point((cx + 1) * cs, cy * cs)));
-      ctx.fillRect(nv.x - 1, nv.y - 1, (so.x - nv.x) + 2, (so.y - nv.y) + 2);
+      if (cx < xMin || cx > xMax || cy < yMin || cy > yMax) return null;
+      const nv = this._map.latLngToContainerPoint(MERC.unproject(L.point(cx * cs, (cy + 1) * cs)));
+      const so = this._map.latLngToContainerPoint(MERC.unproject(L.point((cx + 1) * cs, cy * cs)));
+      return [nv.x, nv.y, so.x - nv.x, so.y - nv.y];
+    };
+
+    if (S.fog) {
+      ctx.fillStyle = "rgba(16,26,22,0.74)";
+      ctx.fillRect(0, 0, st.x, st.y);
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.filter = "blur(5px)";
+      ctx.fillStyle = "#000";
+      for (const [k, aar] of celler) {
+        if (filterAar !== null && aar !== filterAar) continue;
+        const r = rekt(k);
+        if (r) ctx.fillRect(r[0] - 1, r[1] - 1, r[2] + 2, r[3] + 2);
+      }
+      ctx.filter = "none";
+      ctx.globalCompositeOperation = "source-over";
     }
-    ctx.filter = "none";
-    ctx.globalCompositeOperation = "source-over";
+
+    if (S.rate && bench.length) {
+      const med = medianRate(filterAar);
+      for (const bm of bench) {
+        if (filterAar !== null && new Date(bm.t0).getFullYear() !== filterAar) continue;
+        ctx.fillStyle = rateFarge(rateLT(bm), med);
+        for (const k of bm.celler) {
+          const r = rekt(k);
+          if (r) ctx.fillRect(r[0], r[1], r[2] + 0.5, r[3] + 0.5);
+        }
+      }
+    }
   }
 });
 const taake = new Taake();
@@ -461,10 +644,346 @@ const sporLinje = L.polyline([], { color: "#7B8CC4", weight: 2.5, opacity: .85 }
 const posSirkel = L.circleMarker([0, 0], { radius: 8, color: "#EDF0EA", weight: 3, fillColor: "#3A4A80", fillOpacity: 1 });
 const noySirkel = L.circle([0, 0], { radius: 0, color: "#7B8CC4", weight: 1, fillOpacity: .07 });
 const merkeLag = L.layerGroup().addTo(map);
+const soneLag = L.layerGroup().addTo(map);
+const soneSkisse = L.layerGroup().addTo(map);
+let pulsMarkor = null;
 
 /* ============================================================
-   4. Merker
+   4. Benchmark
    ============================================================ */
+let benchAktiv = null, benchTimer = null;
+
+function rateLT(b) { return b.liter / Math.max(1 / 60, (b.t1 - b.t0) / 3600000); }
+function rate100(b) { return b.dist >= 20 ? b.liter / (b.dist / 100) : null; }
+function medianRate(filterAar) {
+  const r = bench
+    .filter(b => filterAar == null || new Date(b.t0).getFullYear() === filterAar)
+    .map(rateLT).sort((a, b) => a - b);
+  if (!r.length) return 0;
+  return r.length % 2 ? r[(r.length - 1) / 2] : (r[r.length / 2 - 1] + r[r.length / 2]) / 2;
+}
+function rateFarge(r, med) {
+  if (med <= 0) return "rgba(217,164,65,.30)";
+  if (r < med * 0.7) return "rgba(196,97,75,.30)";
+  if (r > med * 1.3) return "rgba(123,140,196,.40)";
+  return "rgba(217,164,65,.30)";
+}
+const fmt1 = v => v.toFixed(1).replace(".", ",");
+
+function startBench() {
+  if (benchAktiv) return;
+  visArk(`<h4>Ny måling — hvordan plukker du?</h4>
+    <div class="valg">
+      <button id="akHand">Hånd</button>
+      <button id="akPlukker">Bærplukker</button>
+    </div>`);
+  document.getElementById("akHand").onclick = () => benchIgang("hånd");
+  document.getElementById("akPlukker").onclick = () => benchIgang("bærplukker");
+}
+
+function benchIgang(metode) {
+  lukkArk();
+  benchAktiv = { t0: Date.now(), metode, celler: new Set(), dist0: distanse };
+  document.getElementById("btnBench").classList.add("pa");
+  document.getElementById("benchBar").classList.add("vis");
+  benchTimer = setInterval(oppdaterBenchBar, 1000);
+  oppdaterBenchBar();
+  melding("Måling i gang — plukk!");
+}
+
+function oppdaterBenchBar() {
+  if (!benchAktiv) return;
+  const s = Math.floor((Date.now() - benchAktiv.t0) / 1000);
+  const mm = Math.floor(s / 60), ss = String(s % 60).padStart(2, "0");
+  const d = Math.round(distanse - benchAktiv.dist0);
+  document.getElementById("benchTekst").textContent = `⏱ ${mm}:${ss} · ${d} m · ${benchAktiv.metode}`;
+}
+
+function ferdigBench() {
+  if (!benchAktiv) return;
+  visArk(`<h4>Hvor mye ble det?</h4>
+    <input id="akLiter" type="text" inputmode="decimal" placeholder="liter, f.eks. 1,5">
+    <div class="to">
+      <button class="fare" id="akForkast">Forkast</button>
+      <button class="primar" id="akLagre">Lagre</button>
+    </div>`);
+  const inp = document.getElementById("akLiter");
+  inp.focus();
+  document.getElementById("akForkast").onclick = () => { avsluttBench(); lukkArk(); melding("Måling forkastet"); };
+  document.getElementById("akLagre").onclick = () => {
+    const liter = parseFloat(String(inp.value).replace(",", "."));
+    if (isNaN(liter) || liter < 0) { inp.style.borderColor = "var(--fare)"; return; }
+    const cellerArr = [...benchAktiv.celler];
+    let lat, lng;
+    if (cellerArr.length) {
+      let la = 0, ln = 0;
+      for (const k of cellerArr) { const c = cellSenter(k); la += c.lat; ln += c.lng; }
+      lat = la / cellerArr.length; lng = ln / cellerArr.length;
+    } else {
+      const p = posisjon || map.getCenter();
+      lat = p.lat; lng = p.lng;
+    }
+    const b = {
+      id: Date.now().toString(36), t0: benchAktiv.t0, t1: Date.now(),
+      liter, metode: benchAktiv.metode,
+      dist: Math.max(0, Math.round(distanse - benchAktiv.dist0)),
+      celler: cellerArr, lat, lng
+    };
+    bench.push(b);
+    avsluttBench(); lukkArk(); lagreNa(); taake.tegn(); oppdaterHud();
+    const r1 = rate100(b);
+    melding(`${fmt1(rateLT(b))} l/t` + (r1 != null ? ` · ${fmt1(r1)} l/100 m` : ""), 3500);
+  };
+}
+
+function avsluttBench() {
+  benchAktiv = null;
+  clearInterval(benchTimer);
+  document.getElementById("btnBench").classList.remove("pa");
+  document.getElementById("benchBar").classList.remove("vis");
+}
+
+document.getElementById("btnBench").addEventListener("click", () => benchAktiv ? ferdigBench() : startBench());
+document.getElementById("btnBenchFerdig").addEventListener("click", ferdigBench);
+document.getElementById("btnBenchAvbryt").addEventListener("click", () => { avsluttBench(); melding("Måling avbrutt"); });
+
+/* ============================================================
+   5. Plukksoner
+   ============================================================ */
+let soneModus = null; // {modus:'tegn'|'gaa', pkt:[], harSpurt:false}
+
+function startSone() {
+  if (soneModus) return;
+  visArk(`<h4>Ny plukksone</h4>
+    <div class="valg">
+      <button id="akTegn">Trykk hjørner på kartet</button>
+      <button id="akGaa">Gå grensa selv</button>
+    </div>`);
+  document.getElementById("akTegn").onclick = () => { lukkArk(); soneIgang("tegn"); };
+  document.getElementById("akGaa").onclick = () => { lukkArk(); soneIgang("gaa"); };
+}
+
+function soneIgang(modus) {
+  soneModus = { modus, pkt: [], harSpurt: false };
+  document.getElementById("btnSone").classList.add("pa");
+  document.getElementById("soneBar").classList.add("vis");
+  document.getElementById("btnSoneAngre").style.display = modus === "tegn" ? "" : "none";
+  oppdaterSoneBar();
+  melding(modus === "tegn" ? "Trykk der hjørnene skal stå" : "Gå grensa — jeg følger etter");
+}
+
+function oppdaterSoneBar() {
+  if (!soneModus) return;
+  document.getElementById("soneTekst").textContent =
+    (soneModus.modus === "tegn" ? "⬡ Hjørner: " : "⬡ Grensepunkter: ") + soneModus.pkt.length;
+  soneSkisse.clearLayers();
+  if (soneModus.pkt.length) {
+    L.polyline(soneModus.pkt, { color: "#A8C08A", weight: 3, dashArray: "5 6" }).addTo(soneSkisse);
+    L.circleMarker(soneModus.pkt[0], { radius: 8, color: "#A8C08A", weight: 3, fillColor: "#101A16", fillOpacity: 1 }).addTo(soneSkisse);
+    if (soneModus.pkt.length >= 3)
+      L.polyline([soneModus.pkt[soneModus.pkt.length - 1], soneModus.pkt[0]],
+        { color: "#A8C08A", weight: 1.5, dashArray: "2 7", opacity: .7 }).addTo(soneSkisse);
+  }
+}
+
+function soneLeggTil(lat, lng) {
+  const pkt = soneModus.pkt;
+  // autolukk: nær startpunktet etter å ha vært unna
+  if (pkt.length >= 3 && map.distance([lat, lng], pkt[0]) < 20) {
+    if (soneModus.modus === "tegn") { ferdigSone(); return; }
+    if (!soneModus.harSpurt && soneVeiLengde() > 60) {
+      soneModus.harSpurt = true;
+      visArk(`<h4>Du er ved startpunktet</h4>
+        <div class="to">
+          <button id="akFortsett">Fortsett å gå</button>
+          <button class="primar" id="akLukkSone">Lukk sonen her</button>
+        </div>`);
+      document.getElementById("akFortsett").onclick = lukkArk;
+      document.getElementById("akLukkSone").onclick = () => { lukkArk(); ferdigSone(); };
+    }
+  }
+  if (soneModus.modus === "gaa" && pkt.length) {
+    if (map.distance([lat, lng], pkt[pkt.length - 1]) < 4) return; // stå-stille-støy
+  }
+  pkt.push([lat, lng]);
+  oppdaterSoneBar();
+}
+
+function soneVeiLengde() {
+  let s = 0;
+  const p = soneModus.pkt;
+  for (let i = 1; i < p.length; i++) s += map.distance(p[i - 1], p[i]);
+  return s;
+}
+
+function ferdigSone() {
+  if (!soneModus || soneModus.pkt.length < 3) { melding("Trenger minst tre punkter"); return; }
+  // lukkes automatisk med rett strek fra siste til første; forenkle sikksakk
+  const pkt = forenkle(soneModus.pkt, soneModus.modus === "gaa" ? 4 : 1);
+  if (pkt.length < 3) { melding("Sonen ble for liten"); return; }
+  avbrytSone(true);
+  visArk(`<h4>Navn på sonen</h4>
+    <input id="akNavn" type="text" value="Sone ${soner.length + 1}">
+    <div class="to">
+      <button class="fare" id="akForkast">Forkast</button>
+      <button class="primar" id="akLagre">Lagre</button>
+    </div>`);
+  const inp = document.getElementById("akNavn");
+  inp.select();
+  document.getElementById("akForkast").onclick = lukkArk;
+  document.getElementById("akLagre").onclick = () => {
+    soner.push({ id: Date.now().toString(36), navn: inp.value.trim() || `Sone ${soner.length + 1}`, pkt, t: Date.now() });
+    lukkArk(); lagreNa(); tegnSoner(); oppdaterHud();
+    melding("Sone lagret");
+  };
+}
+
+function avbrytSone(stille) {
+  soneModus = null;
+  soneSkisse.clearLayers();
+  document.getElementById("btnSone").classList.remove("pa");
+  document.getElementById("soneBar").classList.remove("vis");
+  if (!stille) melding("Sone avbrutt");
+}
+
+document.getElementById("btnSone").addEventListener("click", () => soneModus ? ferdigSone() : startSone());
+document.getElementById("btnSoneFerdig").addEventListener("click", ferdigSone);
+document.getElementById("btnSoneAvbryt").addEventListener("click", () => avbrytSone(false));
+document.getElementById("btnSoneAngre").addEventListener("click", () => {
+  if (soneModus && soneModus.pkt.length) { soneModus.pkt.pop(); oppdaterSoneBar(); }
+});
+
+/* ---- sonestatistikk ---- */
+function soneStat(s) {
+  const cs = cellStorrelse();
+  let laMin = 90, laMax = -90, lnMin = 180, lnMax = -180;
+  for (const p of s.pkt) {
+    laMin = Math.min(laMin, p[0]); laMax = Math.max(laMax, p[0]);
+    lnMin = Math.min(lnMin, p[1]); lnMax = Math.max(lnMax, p[1]);
+  }
+  const sv = MERC.project(L.latLng(laMin, lnMin));
+  const no = MERC.project(L.latLng(laMax, lnMax));
+  let tot = 0, dekt = 0;
+  const filterAar = S.aar === "alle" ? null : +S.aar;
+  for (let x = Math.floor(sv.x / cs); x <= Math.floor(no.x / cs); x++) {
+    for (let y = Math.floor(sv.y / cs); y <= Math.floor(no.y / cs); y++) {
+      const c = MERC.unproject(L.point((x + 0.5) * cs, (y + 0.5) * cs));
+      if (!iPolygon(c.lat, c.lng, s.pkt)) continue;
+      tot++;
+      const aar = celler.get(x + "," + y);
+      if (aar != null && (filterAar === null || aar === filterAar)) dekt++;
+    }
+  }
+  const iAar = new Date().getFullYear();
+  let literIAar = 0, literTot = 0;
+  for (const m of merker) {
+    if (!m.liter || !iPolygon(m.lat, m.lng, s.pkt)) continue;
+    literTot += m.liter;
+    if (new Date(m.t).getFullYear() === iAar) literIAar += m.liter;
+  }
+  const maal = [];
+  for (const b of bench) {
+    if (!iPolygon(b.lat, b.lng, s.pkt)) continue;
+    literTot += b.liter;
+    if (new Date(b.t0).getFullYear() === iAar) literIAar += b.liter;
+    maal.push(rateLT(b));
+  }
+  return {
+    tot, dekt, pst: tot ? Math.round(dekt / tot * 100) : 0,
+    daa: tot * S.grid * S.grid / 1000,
+    literIAar, literTot, maal: maal.sort((a, b) => a - b)
+  };
+}
+
+function narmesteUdekte(s) {
+  const cs = cellStorrelse();
+  const fra = posisjon || map.getCenter();
+  let laMin = 90, laMax = -90, lnMin = 180, lnMax = -180;
+  for (const p of s.pkt) {
+    laMin = Math.min(laMin, p[0]); laMax = Math.max(laMax, p[0]);
+    lnMin = Math.min(lnMin, p[1]); lnMax = Math.max(lnMax, p[1]);
+  }
+  const sv = MERC.project(L.latLng(laMin, lnMin));
+  const no = MERC.project(L.latLng(laMax, lnMax));
+  let best = null, bestD = Infinity;
+  for (let x = Math.floor(sv.x / cs); x <= Math.floor(no.x / cs); x++) {
+    for (let y = Math.floor(sv.y / cs); y <= Math.floor(no.y / cs); y++) {
+      if (celler.has(x + "," + y)) continue;
+      const c = MERC.unproject(L.point((x + 0.5) * cs, (y + 0.5) * cs));
+      if (!iPolygon(c.lat, c.lng, s.pkt)) continue;
+      const d = map.distance(fra, c);
+      if (d < bestD) { bestD = d; best = c; }
+    }
+  }
+  return best ? { latlng: best, d: bestD } : null;
+}
+
+function tegnSoner() {
+  soneLag.clearLayers();
+  if (!S.soner) return;
+  for (const s of soner) {
+    const pg = L.polygon(s.pkt, {
+      color: "#A8C08A", weight: 2, dashArray: "6 5",
+      fillColor: "#A8C08A", fillOpacity: 0.06
+    }).addTo(soneLag);
+    pg.bindPopup(() => sonePopupHtml(s), { closeButton: false, minWidth: 215 });
+    pg.on("popupopen", () => kobleSonePopup(s));
+  }
+}
+
+function sonePopupHtml(s) {
+  const st = soneStat(s);
+  const maal = st.maal.length
+    ? `${st.maal.length} ${st.maal.length === 1 ? "måling" : "målinger"}: ${fmt1(st.maal[0])}–${fmt1(st.maal[st.maal.length - 1])} l/t`
+    : "Ingen målinger ennå";
+  return `<div class="pop-tit" style="color:#A8C08A">${escHtml(s.navn)}</div>
+    <div class="pop-meta">${fmt1(st.daa)} daa · ${st.pst} % dekket<br>
+    I år: ${fmt1(st.literIAar)} l · Totalt: ${fmt1(st.literTot)} l<br>${maal}</div>
+    <div class="pop-knapper">
+      <button id="su-${s.id}">Nærmeste udekte</button>
+      <button id="sn-${s.id}">Nytt navn</button>
+      <button id="sd-${s.id}" class="slett">Slett</button>
+    </div>`;
+}
+
+function kobleSonePopup(s) {
+  const ud = document.getElementById("su-" + s.id);
+  const nn = document.getElementById("sn-" + s.id);
+  const sl = document.getElementById("sd-" + s.id);
+  if (ud) ud.onclick = () => {
+    map.closePopup();
+    const t = narmesteUdekte(s);
+    if (!t) { melding("Hele sonen er dekket — godt jobba"); return; }
+    if (pulsMarkor) map.removeLayer(pulsMarkor);
+    pulsMarkor = L.marker(t.latlng, { icon: L.divIcon({ className: "", html: '<div class="puls"></div>', iconSize: [16, 16], iconAnchor: [8, 8] }) }).addTo(map);
+    setTimeout(() => { if (pulsMarkor) { map.removeLayer(pulsMarkor); pulsMarkor = null; } }, 45000);
+    const fra = posisjon || map.getCenter();
+    melding(`Udekt område ${Math.round(t.d)} m ${HIMMEL[Math.round(peiling(fra, t.latlng) / 45) % 8]}`, 3500);
+  };
+  if (nn) nn.onclick = () => {
+    map.closePopup();
+    visArk(`<h4>Nytt navn</h4>
+      <input id="akNavn" type="text" value="${escHtml(s.navn)}">
+      <div class="to"><button id="akAvbryt">Avbryt</button><button class="primar" id="akLagre">Lagre</button></div>`);
+    const inp = document.getElementById("akNavn"); inp.select();
+    document.getElementById("akAvbryt").onclick = lukkArk;
+    document.getElementById("akLagre").onclick = () => {
+      s.navn = inp.value.trim() || s.navn;
+      lukkArk(); lagreNa(); tegnSoner();
+    };
+  };
+  if (sl) sl.onclick = () => {
+    if (!confirm(`Slette sonen «${s.navn}»? Tåke og merker beholdes.`)) return;
+    soner = soner.filter(x => x.id !== s.id);
+    map.closePopup(); lagreNa(); tegnSoner(); oppdaterHud();
+  };
+}
+
+/* ============================================================
+   6. Merker
+   ============================================================ */
+function escHtml(s) { return String(s || "").replace(/[<>&"]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c])); }
+
 function tegnMerker() {
   merkeLag.clearLayers();
   const filterAar = S.aar === "alle" ? null : +S.aar;
@@ -488,8 +1007,8 @@ function popupHtml(m) {
   return `<div class="pop-tit" style="color:${f.farge}">${f.navn}</div>
     <div class="pop-meta">${dato} kl ${kl}<br>${m.lat.toFixed(5)}, ${m.lng.toFixed(5)}</div>
     <div class="pop-felt">
-      <input class="liter" id="pl-${m.id}" type="number" inputmode="decimal" step="0.5" placeholder="ltr" value="${m.liter != null ? m.liter : ""}">
-      <input id="pn-${m.id}" type="text" placeholder="Notat" value="${(m.notat || "").replace(/"/g, "&quot;")}">
+      <input class="liter" id="pl-${m.id}" type="text" inputmode="decimal" placeholder="ltr" value="${m.liter != null ? String(m.liter).replace(".", ",") : ""}">
+      <input id="pn-${m.id}" type="text" placeholder="Notat" value="${escHtml(m.notat)}">
     </div>
     <div class="pop-knapper">
       <button id="pd-${m.id}" class="slett">Slett</button>
@@ -503,7 +1022,8 @@ function koblePopup(m) {
   const kn = document.getElementById("pk-" + m.id);
   const sl = document.getElementById("pd-" + m.id);
   if (kn) kn.onclick = () => {
-    m.liter = li && li.value !== "" ? parseFloat(li.value) : null;
+    m.liter = li && li.value.trim() !== "" ? parseFloat(li.value.replace(",", ".")) : null;
+    if (m.liter != null && isNaN(m.liter)) m.liter = null;
     m.notat = no ? no.value : "";
     lagreNa(); map.closePopup(); oppdaterHud();
   };
@@ -519,10 +1039,15 @@ function nyttMerke(type, punkt) {
   merker.push({ id: Date.now().toString(36), type, lat: p.lat, lng: p.lng, t: Date.now(), liter: null, notat: "" });
   lagreNa(); tegnMerker(); oppdaterHud(); fyllAar();
   melding((FARGER[type] || FARGER.funn).navn + (punkt || posisjon ? "" : " — satt på kartmidten"));
+  if (type === "sekk" && !sekkHintVist) {
+    sekkHintVist = true;
+    setTimeout(() => melding("Tips: trykk på sekkechipen øverst for retur langs sporet", 3500), 2300);
+  }
 }
+let sekkHintVist = false;
 
 /* ============================================================
-   5. GPS, med reservemodus hvis den er sperret
+   7. GPS
    ============================================================ */
 let folg = true, wake = null, gpsSvarte = false;
 
@@ -554,6 +1079,7 @@ function fix(pos) {
   document.getElementById("varsel").classList.remove("vis");
   const { latitude: lat, longitude: lng, accuracy: acc } = pos.coords;
   posisjon = L.latLng(lat, lng);
+  posisjon.acc = acc;
   if (S.lat0 == null) S.lat0 = lat;
 
   document.getElementById("chipGps").classList.toggle("svak", acc > S.acc);
@@ -561,7 +1087,10 @@ function fix(pos) {
   posSirkel.setLatLng([lat, lng]);
   noySirkel.setLatLng([lat, lng]).setRadius(acc);
   if (folg) map.setView([lat, lng], Math.max(map.getZoom(), 16), { animate: true });
+  oppdaterKoord();
   if (acc > S.acc) return;
+
+  if (soneModus && soneModus.modus === "gaa") soneLeggTil(lat, lng);
 
   if (sisteFix) {
     const d = map.distance(sisteFix, [lat, lng]);
@@ -591,7 +1120,7 @@ document.addEventListener("visibilitychange", () => {
 });
 
 /* ============================================================
-   6. HUD
+   8. Kompass, retur og HUD
    ============================================================ */
 const HIMMEL = ["N", "NØ", "Ø", "SØ", "S", "SV", "V", "NV"];
 function peiling(a, b) {
@@ -601,11 +1130,59 @@ function peiling(a, b) {
     Math.cos(t1) * Math.sin(t2) - Math.sin(t1) * Math.cos(t2) * Math.cos(dl)) * 180 / Math.PI + 360) % 360;
 }
 
+let heading = null, harAbsolutt = false, retur = false;
+function onOri(e, abs) {
+  if (e.alpha == null) return;
+  if (abs) harAbsolutt = true;
+  else if (harAbsolutt || e.absolute !== true) return;
+  heading = (360 - e.alpha) % 360;
+  oppdaterPil();
+}
+window.addEventListener("deviceorientationabsolute", e => onOri(e, true), true);
+window.addEventListener("deviceorientation", e => onOri(e, false), true);
+
+let pilVenter = false;
+function oppdaterPil() {
+  if (pilVenter) return;
+  pilVenter = true;
+  requestAnimationFrame(() => {
+    pilVenter = false;
+    const pil = document.getElementById("sekkPil");
+    const sekk = merker.find(m => m.type === "sekk");
+    if (heading == null || !sekk || !posisjon) { pil.style.display = "none"; return; }
+    pil.style.display = "inline-block";
+    pil.style.transform = `rotate(${(peiling(posisjon, sekk) - heading + 360) % 360}deg)`;
+  });
+}
+
+function sporTilStart() {
+  if (!posisjon || spor.length < 2) return null;
+  let ni = 0, nd = Infinity;
+  for (let i = 0; i < spor.length; i++) {
+    const d = map.distance(posisjon, [spor[i][0], spor[i][1]]);
+    if (d < nd) { nd = d; ni = i; }
+  }
+  let sum = nd;
+  for (let i = ni; i > 0; i--) sum += map.distance([spor[i][0], spor[i][1]], [spor[i - 1][0], spor[i - 1][1]]);
+  const sekk = merker.find(m => m.type === "sekk");
+  if (sekk) sum += map.distance([spor[0][0], spor[0][1]], [sekk.lat, sekk.lng]);
+  return sum;
+}
+
+document.getElementById("chipSekk").addEventListener("click", () => {
+  if (!merker.find(m => m.type === "sekk")) return;
+  retur = !retur;
+  sporLinje.setStyle({ color: retur ? "#D9A441" : "#7B8CC4", weight: retur ? 5 : 2.5 });
+  document.getElementById("etSekk").textContent = retur ? "via sporet" : "til sekken";
+  melding(retur ? "Retur: følg den gule linja tilbake" : "Retur av");
+  oppdaterHud();
+});
+
 function dekningIView() {
   const cs = cellStorrelse();
   const b = map.getBounds();
-  const sv = L.CRS.EPSG3857.project(b.getSouthWest());
-  const no = L.CRS.EPSG3857.project(b.getNorthEast());
+  const sv = MERC.project(b.getSouthWest());
+  const no = MERC.project(b.getNorthEast());
   const xMin = Math.floor(sv.x / cs), xMax = Math.floor(no.x / cs);
   const yMin = Math.floor(sv.y / cs), yMax = Math.floor(no.y / cs);
   const total = (xMax - xMin + 1) * (yMax - yMin + 1);
@@ -622,30 +1199,110 @@ function dekningIView() {
 }
 
 function oppdaterHud() {
-  document.getElementById("vDist").textContent = (distanse / 1000).toFixed(1).replace(".", ",");
+  document.getElementById("vDist").textContent = fmt1(distanse / 1000);
   const pst = dekningIView();
-  document.getElementById("vAreal").textContent = (pst < 10 ? pst.toFixed(1).replace(".", ",") : Math.round(pst)) + " %";
+  document.getElementById("vAreal").textContent = (pst < 10 ? fmt1(pst) : Math.round(pst)) + " %";
   document.getElementById("dekningBar").style.width = pst + "%";
 
   const sekk = merker.find(m => m.type === "sekk");
   const chip = document.getElementById("chipSekk");
   if (sekk && posisjon) {
-    const d = map.distance(posisjon, [sekk.lat, sekk.lng]);
-    const r = HIMMEL[Math.round(peiling(posisjon, sekk) / 45) % 8];
-    document.getElementById("vSekk").textContent =
-      (d < 1000 ? Math.round(d) + " m" : (d / 1000).toFixed(1).replace(".", ",") + " km") + " " + r;
+    let tekst;
+    if (retur) {
+      const d = sporTilStart();
+      tekst = d == null ? "—" : (d < 1000 ? Math.round(d) + " m" : fmt1(d / 1000) + " km");
+    } else {
+      const d = map.distance(posisjon, [sekk.lat, sekk.lng]);
+      const r = HIMMEL[Math.round(peiling(posisjon, sekk) / 45) % 8];
+      tekst = (d < 1000 ? Math.round(d) + " m" : fmt1(d / 1000) + " km") + " " + r;
+    }
+    document.getElementById("vSekk").textContent = tekst;
     chip.style.display = "";
   } else chip.style.display = "none";
+  oppdaterPil();
 
-  const liter = merker.reduce((s, m) => s + (m.liter || 0), 0);
-  const daa = (celler.size * S.grid * S.grid / 1000).toFixed(1).replace(".", ",");
+  const liter = merker.reduce((s, m) => s + (m.liter || 0), 0) + bench.reduce((s, b) => s + b.liter, 0);
+  const daa = fmt1(celler.size * S.grid * S.grid / 1000);
   document.getElementById("statTekst").textContent =
-    `${daa} daa dekket totalt · ${merker.length} ${merker.length === 1 ? "merke" : "merker"} · ${spor.length} sporpunkter` +
-    (liter ? ` · ${String(liter).replace(".", ",")} liter registrert` : "");
+    `${daa} daa dekket · ${merker.length} ${merker.length === 1 ? "merke" : "merker"} · ` +
+    `${soner.length} ${soner.length === 1 ? "sone" : "soner"} · ${bench.length} ${bench.length === 1 ? "måling" : "målinger"}` +
+    (liter ? ` · ${fmt1(liter)} liter` : "");
 }
 
 /* ============================================================
-   7. Eksport
+   9. Solnedgang
+   ============================================================ */
+let varslet60 = false, varslet30 = false;
+
+function solnedgang(lat, lng, d) {
+  const rad = Math.PI / 180;
+  const aar = d.getUTCFullYear();
+  const doy = Math.floor((Date.UTC(aar, d.getUTCMonth(), d.getUTCDate()) - Date.UTC(aar, 0, 0)) / 86400000);
+  const g = 2 * Math.PI / 365 * (doy - 1 + 0.5);
+  const eqt = 229.18 * (0.000075 + 0.001868 * Math.cos(g) - 0.032077 * Math.sin(g)
+    - 0.014615 * Math.cos(2 * g) - 0.040849 * Math.sin(2 * g));
+  const dekl = 0.006918 - 0.399912 * Math.cos(g) + 0.070257 * Math.sin(g)
+    - 0.006758 * Math.cos(2 * g) + 0.000907 * Math.sin(2 * g)
+    - 0.002697 * Math.cos(3 * g) + 0.00148 * Math.sin(3 * g);
+  const cosH = (Math.cos(90.833 * rad) - Math.sin(lat * rad) * Math.sin(dekl)) / (Math.cos(lat * rad) * Math.cos(dekl));
+  if (cosH < -1 || cosH > 1) return null;   // midnattssol eller mørketid
+  const H = Math.acos(cosH) / rad;
+  const min = 720 - 4 * (lng - H) - eqt;
+  const res = new Date(Date.UTC(aar, d.getUTCMonth(), d.getUTCDate()));
+  res.setUTCSeconds(Math.round(min * 60));
+  return res;
+}
+
+function sjekkSol() {
+  const p = posisjon || map.getCenter();
+  const ned = solnedgang(p.lat, p.lng, new Date());
+  const stripe = document.getElementById("solStripe");
+  if (!ned) { stripe.classList.remove("vis"); return; }
+  const igjen = (ned - Date.now()) / 60000;
+  const kl = ned.toLocaleTimeString("no-NO", { hour: "2-digit", minute: "2-digit" });
+  if (igjen <= 180 && igjen > -40) {
+    stripe.classList.add("vis");
+    stripe.classList.toggle("morkt", igjen <= 0);
+    document.getElementById("solTekst").textContent = igjen > 0
+      ? `Sol ned ${kl} · ${igjen >= 60 ? Math.floor(igjen / 60) + " t " + Math.round(igjen % 60) + " m" : Math.round(igjen) + " min"} igjen`
+      : `Sola gikk ned ${kl}`;
+  } else stripe.classList.remove("vis");
+
+  const sekk = merker.find(m => m.type === "sekk");
+  const avstand = sekk && posisjon
+    ? ` · ${Math.round(map.distance(posisjon, [sekk.lat, sekk.lng]))} m til sekken` : "";
+  if (igjen <= 60 && igjen > 55 && !varslet60) { varslet60 = true; melding(`60 min til solnedgang${avstand}`, 4000); }
+  if (igjen <= 30 && igjen > 25 && !varslet30) { varslet30 = true; melding(`30 min til solnedgang${avstand}`, 4000); }
+}
+setInterval(sjekkSol, 60000);
+
+/* ============================================================
+   10. Nødkoordinat
+   ============================================================ */
+function ddm(v, pos, neg) {
+  const h = v < 0 ? neg : pos;
+  v = Math.abs(v);
+  const g = Math.floor(v);
+  return `${g}° ${((v - g) * 60).toFixed(3).replace(".", ",")}′ ${h}`;
+}
+function oppdaterKoord() {
+  if (!document.getElementById("koord").classList.contains("apen")) return;
+  if (!posisjon) { document.getElementById("koordStor").textContent = "Ingen posisjon"; return; }
+  document.getElementById("koordStor").innerHTML =
+    posisjon.lat.toFixed(5) + "<br>" + posisjon.lng.toFixed(5);
+  document.getElementById("koordDdm").innerHTML =
+    ddm(posisjon.lat, "N", "S") + "<br>" + ddm(posisjon.lng, "Ø", "V");
+  document.getElementById("koordNoy").textContent = posisjon.acc ? "Nøyaktighet ± " + Math.round(posisjon.acc) + " m" : "";
+}
+document.getElementById("chipGps").addEventListener("click", () => {
+  document.getElementById("koord").classList.add("apen");
+  oppdaterKoord();
+});
+document.getElementById("koord").addEventListener("click", () =>
+  document.getElementById("koord").classList.remove("apen"));
+
+/* ============================================================
+   11. Eksport
    ============================================================ */
 function lastNed(navn, innhold, type) {
   const a = document.createElement("a");
@@ -661,7 +1318,11 @@ function gpx() {
   const wpt = merker.map(m =>
     `  <wpt lat="${m.lat}" lon="${m.lng}"><time>${new Date(m.t).toISOString()}</time>` +
     `<name>${esc((FARGER[m.type] || FARGER.funn).navn)}${m.liter ? " " + m.liter + " l" : ""}</name>` +
-    `<desc>${esc(m.notat)}</desc></wpt>`).join("\n");
+    `<desc>${esc(m.notat)}</desc></wpt>`)
+    .concat(bench.map(b =>
+      `  <wpt lat="${b.lat}" lon="${b.lng}"><time>${new Date(b.t0).toISOString()}</time>` +
+      `<name>Måling ${fmt1(rateLT(b))} l/t</name><desc>${b.liter} l, ${b.metode}, ${b.dist} m</desc></wpt>`))
+    .join("\n");
   const trk = spor.map(p => `      <trkpt lat="${p[0]}" lon="${p[1]}"><time>${new Date(p[2]).toISOString()}</time></trkpt>`).join("\n");
   lastNed(`blaabaer-${new Date().toISOString().slice(0, 10)}.gpx`,
 `<?xml version="1.0" encoding="UTF-8"?>
@@ -674,15 +1335,22 @@ ${trk}
 }
 
 /* ============================================================
-   8. Grensesnitt
+   12. Grensesnitt
    ============================================================ */
 let brodTimer;
-function melding(t) {
+function melding(t, ms) {
   const b = document.getElementById("brod");
   b.textContent = t; b.classList.add("vis");
   clearTimeout(brodTimer);
-  brodTimer = setTimeout(() => b.classList.remove("vis"), 2000);
+  brodTimer = setTimeout(() => b.classList.remove("vis"), ms || 2000);
 }
+
+function visArk(html) {
+  const a = document.getElementById("ark");
+  a.innerHTML = html;
+  a.classList.add("apen");
+}
+function lukkArk() { document.getElementById("ark").classList.remove("apen"); }
 
 document.querySelectorAll(".rail button").forEach(b =>
   b.addEventListener("click", () => nyttMerke(b.dataset.type)));
@@ -707,13 +1375,23 @@ document.getElementById("btnTaake").addEventListener("click", () => {
   melding(S.fog ? "Tåke på" : "Tåke av");
 });
 
-map.on("contextmenu", e => nyttMerke("senere", e.latlng));
+map.on("click", e => {
+  if (soneModus && soneModus.modus === "tegn") soneLeggTil(e.latlng.lat, e.latlng.lng);
+});
+map.on("contextmenu", e => {
+  if (soneModus) return;
+  const typer = ["funn", "senere", "tomt", "myr", "kratt", "bratt"];
+  visArk(`<h4>Sett merke her</h4><div class="valg">` +
+    typer.map(t => `<button data-ark-type="${t}"><span class="dot" style="background:${FARGER[t].farge}"></span>${FARGER[t].navn}</button>`).join("") +
+    `</div>`);
+  document.querySelectorAll("#ark [data-ark-type]").forEach(b =>
+    b.onclick = () => { lukkArk(); nyttMerke(b.dataset.arkType, e.latlng); });
+});
 
 document.getElementById("btnLag").addEventListener("click", byttLag);
 document.getElementById("btnMeny").addEventListener("click", () => {
-  map.closePopup();
-  visLagringStatus();
-  oppdaterHud();
+  map.closePopup(); lukkArk();
+  visLagringStatus(); oppdaterHud(); fyllLister();
   document.getElementById("panel").classList.add("apen");
 });
 document.getElementById("btnLukk").addEventListener("click", () =>
@@ -729,20 +1407,67 @@ function kobleValg(id, felt, etterpa) {
   });
 }
 
+function fyllLister() {
+  const sl = document.getElementById("soneListe");
+  sl.innerHTML = soner.length ? "" : '<div class="tom">Ingen soner ennå — trykk ⬡ på kartet.</div>';
+  for (const s of soner) {
+    const st = soneStat(s);
+    const el = document.createElement("div");
+    el.className = "el";
+    el.innerHTML = `<div class="info"><b>${escHtml(s.navn)}</b>
+      <small>${fmt1(st.daa)} daa · ${st.pst} % dekket · i år ${fmt1(st.literIAar)} l</small></div>
+      <button>Vis</button>`;
+    el.querySelector("button").onclick = () => {
+      document.getElementById("panel").classList.remove("apen");
+      map.fitBounds(L.latLngBounds(s.pkt).pad(0.2));
+    };
+    sl.appendChild(el);
+  }
+
+  const filterAar = S.aar === "alle" ? null : +S.aar;
+  const bl = document.getElementById("benchListe");
+  const bs = bench.filter(b => filterAar == null || new Date(b.t0).getFullYear() === filterAar);
+  const rater = bs.map(rateLT).sort((a, b) => a - b);
+  document.getElementById("benchOppsummering").textContent = rater.length
+    ? `${rater.length} ${rater.length === 1 ? "måling" : "målinger"}: ${fmt1(rater[0])}–${fmt1(rater[rater.length - 1])} l/t · median ${fmt1(medianRate(filterAar))}`
+    : "Start en måling med ⏱ når du begynner å plukke.";
+  bl.innerHTML = "";
+  for (const b of [...bs].reverse().slice(0, 25)) {
+    const d = new Date(b.t0);
+    const r1 = rate100(b);
+    const el = document.createElement("div");
+    el.className = "el";
+    el.innerHTML = `<div class="info"><b>${fmt1(rateLT(b))} l/t${r1 != null ? " · " + fmt1(r1) + " l/100 m" : ""}</b>
+      <small>${d.toLocaleDateString("no-NO", { day: "2-digit", month: "short" })} · ${Math.round((b.t1 - b.t0) / 60000)} min · ${fmt1(b.liter)} l · ${b.metode}</small></div>
+      <button>Vis</button><button class="fare">Slett</button>`;
+    const [vis, slett] = el.querySelectorAll("button");
+    vis.onclick = () => {
+      document.getElementById("panel").classList.remove("apen");
+      map.setView([b.lat, b.lng], Math.max(map.getZoom(), 16));
+    };
+    slett.onclick = () => {
+      if (!confirm("Slette målingen?")) return;
+      bench = bench.filter(x => x.id !== b.id);
+      lagreNa(); taake.tegn(); fyllLister(); oppdaterHud();
+    };
+    bl.appendChild(el);
+  }
+}
+
 document.getElementById("btnGpx").addEventListener("click", gpx);
 document.getElementById("btnBackup").addEventListener("click", () =>
   lastNed(`lyng-backup-${new Date().toISOString().slice(0, 10)}.json`, pakk(), "application/json"));
 document.getElementById("btnNullstillSpor").addEventListener("click", () => {
-  if (!confirm("Slette gålinjen? Tåken og merkene beholdes.")) return;
+  if (!confirm("Slette gålinjen? Tåke, merker, soner og målinger beholdes.")) return;
   spor = []; distanse = 0; sisteFix = null;
   sporLinje.setLatLngs([]); lagreNa(); oppdaterHud();
 });
 document.getElementById("btnNullstillAlt").addEventListener("click", async () => {
-  if (!confirm("Slette all tåke, alle merker og hele gålinjen? Dette kan ikke angres.")) return;
-  celler.clear(); merker = []; spor = []; distanse = 0; sisteFix = null;
+  if (!confirm("Slette ALT — tåke, merker, soner, målinger og gålinje? Kan ikke angres.")) return;
+  celler.clear(); merker = []; soner = []; bench = []; spor = []; distanse = 0; sisteFix = null;
   sporLinje.setLatLngs([]);
   await lagreNa();
-  tegnMerker(); taake.tegn(); oppdaterHud(); fyllAar();
+  tegnMerker(); tegnSoner(); taake.tegn(); oppdaterHud(); fyllAar(); fyllLister();
   melding("Alt slettet");
 });
 
@@ -751,6 +1476,7 @@ function fyllAar() {
   const aar = new Set();
   for (const [, a] of celler) aar.add(a);
   for (const m of merker) aar.add(new Date(m.t).getFullYear());
+  for (const b of bench) aar.add(new Date(b.t0).getFullYear());
   const val = S.aar;
   sel.innerHTML = '<option value="alle">Alle år</option>' +
     [...aar].sort((a, b) => b - a).map(a => `<option value="${a}">${a}</option>`).join("");
@@ -769,17 +1495,21 @@ function fyllAar() {
   kobleValg("setAcc", "acc");
   kobleValg("setWake", "wake", () => settWake(S.wake === 1));
   kobleValg("setFog", "fog", () => settTaake(S.fog === 1));
+  kobleValg("setRate", "rate", () => taake.tegn());
+  kobleValg("setSoner", "soner", () => tegnSoner());
   kobleValg("setTrack", "track", () => sporLinje.setLatLngs(S.track ? spor.map(p => [p[0], p[1]]) : []));
-  kobleValg("setYear", "aar", () => { taake.tegn(); tegnMerker(); oppdaterHud(); });
+  kobleValg("setYear", "aar", () => { taake.tegn(); tegnMerker(); tegnSoner(); oppdaterHud(); });
 
   fyllAar();
   tegnMerker();
+  tegnSoner();
   if (S.track) sporLinje.setLatLngs(spor.map(p => [p[0], p[1]]));
   if (spor.length) map.setView([spor[spor.length - 1][0], spor[spor.length - 1][1]], 15);
   document.getElementById("btnTaake").classList.toggle("pa", S.fog === 1);
   visLagringStatus();
   oppdaterHud();
   taake.tegn();
+  sjekkSol();
   start();
   if (S.wake === 1) settWake(true);
   setInterval(lagreNa, 30000);
