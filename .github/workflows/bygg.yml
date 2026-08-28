@@ -6,6 +6,7 @@ on:
     paths:
       - 'lyng.html'
       - 'package.json'
+      - 'package-lock.json'
       - 'capacitor.config.json'
       - 'verktoy/klargjor.mjs'
       - '.github/workflows/bygg.yml'
@@ -57,7 +58,7 @@ jobs:
           cp verktoy/debug.keystore ~/.android/debug.keystore
 
       - name: Installer avhengigheter
-        run: npm install
+        run: npm ci
 
       - name: Legg web-appen i www/
         run: |
@@ -66,6 +67,21 @@ jobs:
           cp node_modules/leaflet/dist/leaflet.js www/vendor/leaflet.js
           cp node_modules/leaflet/dist/leaflet.css www/vendor/leaflet.css
           cp -R node_modules/leaflet/dist/images www/vendor/images
+
+      # Grensesnittet bruker Caprasimo til tall og overskrifter og Figtree til
+      # brødtekst. Fontene legges lokalt i APK-en slik Leaflet gjøres, ellers
+      # faller appen tilbake til systemfonten når telefonen er uten nett.
+      - name: Legg fontene i www/vendor
+        run: |
+          for f in figtree caprasimo; do
+            mkdir -p "www/vendor/$f"
+            cp -R "node_modules/@fontsource/$f/files" "www/vendor/$f/files"
+            cp "node_modules/@fontsource/$f/index.css" "www/vendor/$f/index.css"
+          done
+          test -f www/vendor/figtree/index.css
+          test -f www/vendor/caprasimo/index.css
+          echo "Fonter lagt inn:"
+          du -sh www/vendor/figtree www/vendor/caprasimo
 
       - name: Lag Android-prosjektet
         run: npx cap add android

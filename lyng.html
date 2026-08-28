@@ -3,298 +3,391 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<title>Lyng — blåbærsporing</title>
+<title>Lyng — bær- og soppsporing</title>
 <link href="vendor/leaflet.css" rel="stylesheet" onerror="this.onerror=null;this.href='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'" />
+<link href="vendor/figtree/index.css" rel="stylesheet" onerror="this.onerror=null;this.href='https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap'" />
+<link href="vendor/caprasimo/index.css" rel="stylesheet" onerror="this.onerror=null;this.href='https://fonts.googleapis.com/css2?family=Caprasimo&display=swap'" />
 <style>
   :root {
-    --skygge: #101A16;
-    --skygge-2: #1B2A24;
-    --lyng: #7B8CC4;
-    --lyng-dyp: #3A4A80;
-    --mose: #A8C08A;
-    --stein: #8A9490;
-    --sol: #D9A441;
-    --papir: #EDF0EA;
-    --fare: #C4614B;
-    --rail: 78px;
-    --data: ui-monospace, "SF Mono", "Roboto Mono", Menlo, monospace;
-    --kond: "Roboto Condensed", "Helvetica Neue", system-ui, sans-serif;
+    --papir: #F5EAD8;
+    --ark: #F9F4ED;
+    --sand: #EBDDC5;
+    --ink: #201E1D;
+    --ink-svak: #645C50;
+    --ink-hint: #82796A;
+    --strek: rgba(32,30,29,.16);
+    --strek-svak: rgba(32,30,29,.09);
+    --terra: #C67139;
+    --terra-mork: #B2622D;
+    --terra-dyp: #8C491A;
+    --terra-lys: #FFE1D0;
+    --sage: #7A8A5E;
+    --sage-dyp: #3D472B;
+    --sage-lys: #E1EECC;
+    --gra: #C0B6A5;
+    --rail: 104px;
+    --disp: "Caprasimo", Georgia, serif;
+    --tekst: "Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --data: "Figtree", system-ui, sans-serif;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
     margin: 0; padding: 0; height: 100%; overflow: hidden;
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    background: var(--skygge); color: var(--papir);
+    font-family: var(--tekst);
+    background: var(--papir); color: var(--ink);
     overscroll-behavior: none;
   }
-  #map { position: absolute; inset: 0; background: #cfd6cc; }
+  button { font-family: var(--tekst); }
+  #map { position: absolute; inset: 0; background: #E8E2D4; }
+  /* Solmodus: maks kontrast i sterkt lys */
+  body.sol { --papir: #FFFFFF; --ark: #FFFFFF; --sand: #F0E7D6; --ink: #000000; --ink-svak: #3A352C; --strek: rgba(0,0,0,.34); }
+  body.sol #map { filter: contrast(1.16) brightness(1.05); }
+
   .leaflet-control-attribution {
-    background: rgba(16,26,22,.72) !important; color: var(--stein) !important;
-    font-size: 9px; padding: 2px 6px; border-radius: 6px 0 0 0;
-    margin: 0 0 calc(var(--rail) + 24px) 0 !important;
+    background: rgba(249,244,237,.86) !important; color: var(--ink-hint) !important;
+    font-size: 9px; padding: 3px 8px; border-radius: 10px 0 0 0;
+    margin: 0 0 calc(var(--rail) + 108px) 0 !important;
   }
-  .leaflet-control-attribution a { color: var(--stein) !important; }
+  .leaflet-control-attribution a { color: var(--ink-svak) !important; }
 
   /* ---------- toppfelt ---------- */
   .topp {
     position: absolute; top: 0; left: 0; right: 0; z-index: 600;
-    padding: calc(8px + env(safe-area-inset-top)) 8px 10px;
-    background: linear-gradient(180deg, rgba(16,26,22,.93) 55%, rgba(16,26,22,0));
+    padding: calc(10px + env(safe-area-inset-top)) 12px 10px;
     pointer-events: none;
   }
-  .dekning { height: 3px; background: rgba(237,240,234,.14); border-radius: 2px; overflow: hidden; margin-bottom: 8px; }
-  .dekning i { display: block; height: 100%; width: 0; background: var(--lyng); transition: width .6s ease; }
-  .chips { display: flex; gap: 5px; }
-  .chip {
-    background: rgba(27,42,36,.92); border: 1px solid rgba(237,240,234,.1);
-    border-radius: 10px; padding: 5px 8px; min-width: 0; flex: 1; pointer-events: auto;
+  .dekning { height: 4px; background: rgba(32,30,29,.12); border-radius: 999px; overflow: hidden; margin: 0 4px 9px; }
+  .dekning i { display: block; height: 100%; width: 0; background: var(--terra); border-radius: 999px; transition: width .6s ease; }
+
+  .tallstripe {
+    display: flex; align-items: center; gap: 10px; pointer-events: auto;
+    background: var(--papir); border-radius: 999px; padding: 8px 10px 8px 20px;
+    box-shadow: 0 12px 32px rgba(46,43,37,.22);
   }
-  .chip b {
-    display: block; font-family: var(--data); font-size: 14px; line-height: 1.15;
-    letter-spacing: -.2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  .tall b {
+    display: block; font-family: var(--disp); font-weight: 400; font-size: 22px; line-height: 1;
+    color: var(--ink); white-space: nowrap;
   }
-  .chip span.et {
-    display: block; font-family: var(--kond); font-weight: 700; font-size: 9px;
-    letter-spacing: .1em; text-transform: uppercase; color: var(--stein);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  .tall span.et {
+    display: block; font-size: 9.5px; font-weight: 600; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--ink-hint); margin-top: 3px; white-space: nowrap;
   }
-  .chip.sekk b { color: var(--sol); }
-  .chip.svak b { color: var(--fare); }
-  #sekkPil { display: none; margin-right: 3px; transform-origin: 50% 55%; }
+  .delelinje { width: 1px; height: 30px; background: var(--strek); flex: 0 0 auto; }
+  .tallstripe .fyll { flex: 1; }
+
+  #btnAktivitet {
+    display: flex; align-items: center; gap: 9px; min-height: 56px; padding: 0 20px;
+    border: none; border-radius: 999px; background: var(--gra); color: var(--ark);
+    font-weight: 600; font-size: 15px; cursor: pointer; white-space: nowrap;
+    max-width: 46%; overflow: hidden; text-overflow: ellipsis;
+  }
+  #btnAktivitet::before {
+    content: ""; width: 11px; height: 11px; border-radius: 50%; flex: 0 0 auto;
+    background: var(--ark); opacity: .85;
+  }
+  #btnAktivitet[data-tilstand="plukk"] { background: var(--sage); }
+  #btnAktivitet[data-tilstand="gaa"] { background: #AEBF92; color: var(--sage-dyp); }
+  #btnAktivitet[data-tilstand="gaa"]::before { background: var(--sage-dyp); }
+  #btnAktivitet[data-tilstand="transport"] { background: var(--terra); }
+  #btnAktivitet[data-tilstand="pause"] { background: var(--terra-lys); color: var(--terra-dyp); }
+  #btnAktivitet[data-tilstand="pause"]::before { background: var(--terra-dyp); }
+  #btnAktivitet:disabled { background: var(--sand); color: var(--ink-hint); cursor: default; }
+  #btnAktivitet:disabled::before { background: var(--gra); }
+
+  .underrad { display: flex; gap: 7px; margin-top: 8px; pointer-events: auto; align-items: stretch; }
+  .underrad .chip, .underrad button {
+    display: flex; flex-direction: column; justify-content: center; gap: 2px;
+    min-height: 48px; padding: 6px 14px; border-radius: 999px;
+    background: var(--ark); border: 1px solid var(--strek); color: var(--ink);
+    box-shadow: 0 1px 2px rgba(46,43,37,.14); min-width: 0; cursor: pointer;
+  }
+  .underrad b {
+    font-family: var(--data); font-weight: 700; font-size: 14.5px; line-height: 1.1;
+    font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .underrad span.et {
+    font-size: 9px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--ink-hint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #chipSekk { background: var(--terra-lys); border-color: var(--terra); }
+  #chipSekk b { color: var(--terra-dyp); }
+  #chipSekk span.et { color: var(--terra-dyp); opacity: .75; }
+  .chip.svak { background: var(--terra-lys); border-color: var(--terra-dyp); }
+  .chip.svak b { color: var(--terra-dyp); }
+  #sekkPil { display: none; margin-right: 4px; transform-origin: 50% 55%; }
+
+  #btnTur, #btnTurSlutt {
+    flex-direction: row; align-items: center; gap: 8px;
+    font-weight: 600; font-size: 14px; white-space: nowrap;
+  }
+  #btnTur.aktiv { background: var(--sage-lys); border-color: var(--sage); color: var(--sage-dyp); }
+  #btnTur.pauset { background: var(--terra-lys); border-color: var(--terra); color: var(--terra-dyp); }
+  #btnTurSlutt { display: none; color: var(--terra-dyp); border-color: var(--terra-dyp); }
+  #btnTurSlutt.vis { display: flex; }
 
   .stripe {
-    margin-top: 8px; pointer-events: auto; border-radius: 10px; padding: 8px 10px;
-    font-size: 12.5px; line-height: 1.4; display: none; align-items: center; gap: 8px;
-    background: rgba(27,42,36,.94); border: 1px solid rgba(237,240,234,.14);
+    margin-top: 8px; pointer-events: auto; border-radius: 28px; padding: 14px 18px;
+    display: none; align-items: center; gap: 10px;
+    background: var(--ark); border: 1px solid var(--strek); box-shadow: 0 3px 10px rgba(46,43,37,.16);
   }
   .stripe.vis { display: flex; }
-  .stripe .tekst { flex: 1; min-width: 0; font-family: var(--data); font-size: 12.5px; }
+  .stripe .tekst { flex: 1; min-width: 0; font-weight: 600; font-size: 15px; color: var(--ink); }
   .stripe button {
-    padding: 7px 10px; border-radius: 8px; cursor: pointer; flex: 0 0 auto;
-    border: 1px solid rgba(237,240,234,.2); background: var(--skygge-2); color: var(--papir);
-    font-family: var(--kond); font-weight: 700; font-size: 11px;
-    text-transform: uppercase; letter-spacing: .05em;
+    min-height: 48px; padding: 0 18px; border-radius: 999px; cursor: pointer; flex: 0 0 auto;
+    border: 1px solid var(--strek); background: var(--papir); color: var(--ink);
+    font-weight: 600; font-size: 14px;
   }
-  .stripe button.primar { background: var(--lyng-dyp); border-color: var(--lyng); }
-  .stripe button.fare { color: var(--fare); }
-  #varsel { background: rgba(196,97,75,.14); border-color: rgba(196,97,75,.5); display: none; }
-  #varsel.vis { display: block; }
-  #varsel b { color: var(--fare); }
-  #solStripe .tekst { color: var(--sol); }
-  #solStripe.morkt .tekst { color: var(--fare); }
+  .stripe button.primar { background: var(--terra); border-color: var(--terra); color: var(--ark); }
+  .stripe button.fare { color: var(--terra-dyp); }
+  #benchBar { background: var(--terra); border-color: var(--terra); }
+  #benchBar .tekst { color: var(--ark); font-family: var(--disp); font-weight: 400; font-size: 26px; }
+  #benchBar button { background: var(--ark); border-color: var(--ark); color: var(--terra-dyp); }
+  #benchBar button.fare { background: transparent; border-color: rgba(249,244,237,.6); color: var(--ark); }
+  #soneBar { background: var(--sage); border-color: var(--sage); }
+  #soneBar .tekst { color: var(--ark); font-family: var(--disp); font-weight: 400; font-size: 22px; }
+  #soneBar button { background: transparent; border-color: rgba(249,244,237,.6); color: var(--ark); }
+  #soneBar button.primar { background: var(--ark); border-color: var(--ark); color: var(--sage-dyp); }
+  #soneBar button.fare { color: var(--ark); }
+  #varsel { background: var(--terra-lys); border-color: var(--terra); display: none; }
+  #varsel.vis { display: block; font-size: 14px; line-height: 1.45; color: var(--terra-dyp); }
+  #varsel b { color: var(--terra-dyp); }
+  #solStripe .tekst { color: var(--sage-dyp); }
+  #solStripe.morkt .tekst { color: var(--terra-dyp); }
 
-  .turkontroll {
-    display: flex; gap: 6px; margin-top: 7px; pointer-events: auto;
-  }
-  .turkontroll button {
-    min-height: 38px; border-radius: 10px; border: 1px solid rgba(237,240,234,.14);
-    background: rgba(27,42,36,.94); color: var(--papir); padding: 7px 10px; cursor: pointer;
-    font-family: var(--kond); font-weight: 700; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase;
-  }
-  #btnTur { flex: 1.25; text-align: left; }
-  #btnTur.aktiv { background: rgba(58,74,128,.96); border-color: var(--lyng); }
-  #btnTur.pauset { border-color: var(--sol); color: var(--sol); }
-  #btnTurSlutt {
-    flex: 0 0 auto; color: #ffd9d1; display: none;
-    background: rgba(196,97,75,.2); border-color: rgba(196,97,75,.68);
-  }
-  #btnTurSlutt.vis { display: block; }
-  #btnAktivitet { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  #btnAktivitet[data-tilstand="plukk"] { border-color: var(--mose); color: var(--mose); }
-  #btnAktivitet[data-tilstand="gaa"] { border-color: var(--lyng); color: var(--lyng); }
-  #btnAktivitet[data-tilstand="transport"] { border-color: var(--sol); color: var(--sol); }
-  #btnAktivitet[data-tilstand="stille"], #btnAktivitet[data-tilstand="ukjent"] { color: var(--stein); }
-  #btnAktivitet:disabled { opacity: .55; cursor: default; }
-
-  /* ---------- knapperad ---------- */
-  .rail {
-    position: absolute; left: 0; right: 0; bottom: 0; z-index: 500;
-    padding: 14px 8px calc(10px + env(safe-area-inset-bottom));
-    background: linear-gradient(0deg, rgba(16,26,22,.94) 62%, rgba(16,26,22,0));
-    display: flex; gap: 6px;
-  }
-  .rail button {
-    flex: 1; min-width: 0; height: var(--rail); border-radius: 14px; border: 1px solid rgba(237,240,234,.12);
-    background: var(--skygge-2); color: var(--papir);
-    font-family: var(--kond); font-weight: 700; font-size: 11.5px;
-    letter-spacing: .05em; text-transform: uppercase;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
-    cursor: pointer; transition: transform .1s ease;
-  }
-  .rail button:active { transform: scale(.94); }
-  .rail button .dot { width: 14px; height: 14px; border-radius: 50%; }
-  .rail button:focus-visible { outline: 2px solid var(--papir); outline-offset: 2px; }
-
+  /* ---------- verktøy ---------- */
   .verktoy {
-    position: absolute; right: 8px; bottom: calc(var(--rail) + 28px + env(safe-area-inset-bottom)); z-index: 500;
-    display: flex; flex-direction: column; gap: 6px;
+    position: absolute; right: 14px; z-index: 500;
+    bottom: calc(var(--rail) + 106px + env(safe-area-inset-bottom));
+    display: flex; flex-direction: column; gap: 10px; align-items: flex-end;
   }
   .verktoy button {
-    width: 48px; height: 48px; border-radius: 12px; border: 1px solid rgba(237,240,234,.12);
-    background: rgba(27,42,36,.93); color: var(--papir); font-size: 17px; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
+    width: 60px; height: 60px; border-radius: 50%; border: none;
+    background: var(--papir); color: var(--ink); font-size: 22px; cursor: pointer;
+    box-shadow: 0 3px 10px rgba(46,43,37,.28);
+    display: flex; align-items: center; justify-content: center; flex: 0 0 auto;
   }
-  .verktoy button.pa { background: var(--lyng-dyp); border-color: var(--lyng); }
-  .verktoy button:active { transform: scale(.93); }
+  .verktoy button.pa { background: var(--terra); color: var(--ark); }
+  .verktoy button:active { transform: scale(.94); }
+  .verktoy button:focus-visible { outline: 2px solid var(--terra); outline-offset: 2px; }
+  #btnVerktoy.apen { background: var(--ink); color: var(--ark); }
+  .vifte { display: none; flex-direction: column; gap: 9px; align-items: flex-end; }
+  .vifte.apen { display: flex; }
+  .vifte button {
+    width: auto; height: 56px; padding: 0 20px; border-radius: 999px;
+    font-size: 14.5px; font-weight: 600; gap: 10px;
+  }
+  .vifte button::after { content: attr(data-navn); }
+
+  /* ---------- båndet ---------- */
+  .rail {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 500;
+    padding: 16px 14px calc(22px + env(safe-area-inset-bottom));
+    background: var(--papir); border-radius: 32px 32px 0 0;
+    box-shadow: 0 -12px 32px rgba(46,43,37,.18);
+  }
+  .hurtig { display: flex; gap: 8px; margin-bottom: 14px; }
+  .hurtig button {
+    flex: 1; min-width: 0; min-height: 60px; border-radius: 999px;
+    border: 1px solid var(--strek); background: var(--ark); color: var(--ink);
+    font-weight: 600; font-size: 11.5px; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+    transition: transform .1s ease;
+  }
+  .hurtig button:active { transform: scale(.94); }
+  .hurtig button .dot { width: 16px; height: 16px; border-radius: 50%; flex: 0 0 auto; }
+  .hurtig button:focus-visible { outline: 2px solid var(--terra); outline-offset: 2px; }
+  .hovedrad { display: flex; align-items: center; gap: 14px; }
+  #btnSol {
+    width: 64px; height: 64px; border-radius: 50%; flex: 0 0 auto; cursor: pointer;
+    border: 2px solid var(--sage); background: transparent; color: var(--sage-dyp);
+    font-size: 26px; display: flex; align-items: center; justify-content: center;
+  }
+  body.sol #btnSol { border-color: var(--terra); background: var(--terra-lys); color: var(--terra-dyp); }
+  #btnMerk {
+    flex: 1; min-height: var(--rail); border-radius: 999px; border: none; cursor: pointer;
+    background: var(--terra); color: var(--ark);
+    display: flex; align-items: center; justify-content: center; gap: 14px;
+    box-shadow: 0 12px 32px rgba(140,73,26,.32);
+    font-family: var(--disp); font-weight: 400; font-size: 26px;
+    transition: transform .1s ease;
+  }
+  #btnMerk:active { transform: scale(.97); background: var(--terra-dyp); }
+  #btnMerk svg { flex: 0 0 auto; }
+  #btnSol:focus-visible, #btnMerk:focus-visible { outline: 2px solid var(--terra-dyp); outline-offset: 3px; }
 
   /* ---------- bunnark ---------- */
   .ark {
     position: absolute; left: 0; right: 0; bottom: 0; z-index: 1100;
-    background: var(--skygge-2); border-top: 1px solid rgba(237,240,234,.14);
-    border-radius: 18px 18px 0 0; padding: 16px 16px calc(22px + env(safe-area-inset-bottom)); display: none;
-    max-height: 82vh; overflow-y: auto;
+    background: var(--papir); border-radius: 32px 32px 0 0;
+    padding: 24px 20px calc(24px + env(safe-area-inset-bottom)); display: none;
+    max-height: 86vh; overflow-y: auto; box-shadow: 0 -12px 32px rgba(46,43,37,.22);
   }
   .ark.apen { display: block; }
-  .ark h4 { margin: 0 0 12px; font-family: var(--kond); font-weight: 700; font-size: 15px; text-transform: uppercase; letter-spacing: .06em; }
-  .ark .valg { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+  .ark h4 {
+    margin: 0 0 14px; font-family: var(--disp); font-weight: 400; font-size: 28px;
+    line-height: 1.1; color: var(--ink);
+  }
+  .ark .valg { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .ark .valg button {
-    padding: 13px 8px; border-radius: 11px; border: 1px solid rgba(237,240,234,.14);
-    background: var(--skygge); color: var(--papir); cursor: pointer;
-    font-family: var(--kond); font-weight: 700; font-size: 12.5px;
-    text-transform: uppercase; letter-spacing: .04em;
-    display: flex; align-items: center; justify-content: center; gap: 7px;
+    min-height: 72px; padding: 14px 16px; border-radius: 28px; cursor: pointer;
+    border: 1px solid var(--strek); background: var(--ark); color: var(--ink);
+    font-weight: 600; font-size: 15.5px;
+    display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;
   }
-  .ark .valg button .dot { width: 12px; height: 12px; border-radius: 50%; }
+  .ark .valg button .dot { width: 26px; height: 26px; border-radius: 50%; flex: 0 0 auto; }
+  .ark .valg button small {
+    display: block; flex-basis: 100%; color: var(--ink-svak); font-size: 12.5px;
+    font-weight: 400; line-height: 1.35; margin-top: 4px;
+  }
+  .ark .valg button.valgt { border: 2px solid var(--terra); background: var(--terra-lys); }
   .ark input {
-    width: 100%; background: var(--skygge); color: var(--papir);
-    border: 1px solid rgba(237,240,234,.18); border-radius: 10px; padding: 12px;
-    font-size: 16px; font-family: var(--data); margin-bottom: 10px;
+    width: 100%; background: var(--ark); color: var(--ink);
+    border: 1px solid var(--strek); border-radius: 999px; padding: 16px 22px;
+    font-size: 18px; font-family: var(--data); font-weight: 600; margin-bottom: 12px;
   }
-  .ark .to { display: flex; gap: 7px; }
+  .ark input:focus-visible { outline: 2px solid var(--terra); outline-offset: 1px; }
+  .ark .to { display: flex; gap: 10px; }
   .ark .to button {
-    flex: 1; padding: 13px; border-radius: 11px; border: 1px solid rgba(237,240,234,.16);
-    background: var(--skygge); color: var(--papir); cursor: pointer;
-    font-family: var(--kond); font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: .05em;
+    flex: 1; min-height: 64px; padding: 0 22px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--strek); background: transparent; color: var(--ink-svak);
+    font-weight: 600; font-size: 16px;
   }
-  .ark .to button.primar { background: var(--lyng-dyp); border-color: var(--lyng); }
-  .ark .to button.fare { color: var(--fare); }
-  .ark .ark-hjelp { color: var(--stein); font-size: 12.5px; line-height: 1.45; margin: -4px 0 12px; }
-  .ark .valg button { min-height: 48px; }
-  .ark .valg button { flex-wrap: wrap; }
-  .ark .valg button small { display: block; flex-basis: 100%; color: var(--stein); font-size: 10px; line-height: 1.35; margin-top: 3px; text-transform: none; letter-spacing: 0; }
-  .ark .valg button.valgt { border-color: var(--lyng); background: rgba(58,74,128,.7); }
-  .ark .ark-avbryt {
-    position: sticky; bottom: 0; z-index: 1; margin-top: 9px; padding-top: 9px;
-    background: linear-gradient(0deg, var(--skygge-2) 72%, rgba(27,42,36,0));
-  }
-  .ark .ark-avbryt button { width: 100%; }
+  .ark .to button.primar { background: var(--terra); border-color: var(--terra); color: var(--ark); font-size: 18px; }
+  .ark .to button.fare { color: var(--terra-dyp); }
+  .ark .ark-hjelp { color: var(--ink-svak); font-size: 14.5px; line-height: 1.55; margin: -6px 0 18px; text-wrap: pretty; }
+  .ark .ark-avbryt { position: sticky; bottom: 0; z-index: 1; margin-top: 12px; padding-top: 10px; background: var(--papir); }
+  .ark .ark-avbryt button { width: 100%; border-color: transparent; }
   .ark .kartvalg { margin-top: 6px; }
-  .ark .kartvalg + h4 { margin-top: 18px; }
+  .ark .kartvalg + h4 { margin-top: 24px; }
 
   /* ---------- panel ---------- */
   .panel {
-    position: absolute; inset: 0; z-index: 1200; background: var(--skygge);
-    padding: calc(20px + env(safe-area-inset-top)) 18px calc(20px + env(safe-area-inset-bottom)); overflow-y: auto; display: none;
+    position: absolute; inset: 0; z-index: 1200; background: var(--papir);
+    padding: calc(26px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom));
+    overflow-y: auto; display: none;
   }
   .panel.apen { display: block; }
-  .panel h2 { font-family: var(--kond); font-weight: 700; font-size: 23px; margin: 0 0 4px; }
-  .panel h2 .ver { font-size: 12px; color: var(--stein); font-family: var(--data); font-weight: 500; margin-left: 6px; }
-  .panel p.hjelp { color: var(--stein); font-size: 12.5px; margin: 0 0 18px; line-height: 1.5; }
-  .rad { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid rgba(237,240,234,.09); }
-  .rad label { font-size: 14px; }
-  .rad small { display: block; color: var(--stein); font-size: 11.5px; margin-top: 2px; }
+  .panel h2 { font-family: var(--disp); font-weight: 400; font-size: 34px; line-height: 1; margin: 0 0 6px; }
+  .panel h2 .ver { font-size: 13px; color: var(--ink-hint); font-family: var(--tekst); font-weight: 600; margin-left: 8px; }
+  .panel p.hjelp { color: var(--ink-svak); font-size: 14px; margin: 0 0 20px; line-height: 1.55; }
+  .rad {
+    display: flex; justify-content: space-between; align-items: center; gap: 14px;
+    padding: 14px 0; border-bottom: 1px solid var(--strek-svak);
+  }
+  .rad label { font-size: 15.5px; font-weight: 600; }
+  .rad small { display: block; color: var(--ink-svak); font-size: 12.5px; font-weight: 400; margin-top: 3px; line-height: 1.4; }
   .rad select {
-    background: var(--skygge-2); color: var(--papir); border: 1px solid rgba(237,240,234,.14);
-    border-radius: 9px; padding: 9px 10px; font-family: var(--data); font-size: 14px; min-width: 90px;
+    background: var(--ark); color: var(--ink); border: 1px solid var(--strek);
+    border-radius: 999px; padding: 13px 18px; font-family: var(--data);
+    font-weight: 600; font-size: 15px; min-width: 104px; min-height: 48px;
   }
   .knapp {
-    display: block; width: 100%; margin-top: 9px; padding: 14px; border-radius: 12px;
-    border: 1px solid rgba(237,240,234,.16); background: var(--skygge-2); color: var(--papir);
-    font-family: var(--kond); font-weight: 700; font-size: 13.5px;
-    letter-spacing: .05em; text-transform: uppercase; cursor: pointer;
+    display: block; width: 100%; margin-top: 10px; min-height: 60px; padding: 16px;
+    border-radius: 999px; border: 1px solid var(--strek); background: var(--ark); color: var(--ink);
+    font-weight: 600; font-size: 16px; cursor: pointer;
   }
-  .knapp.fare { color: var(--fare); border-color: rgba(196,97,75,.45); }
-  .knapp.primar { background: var(--lyng-dyp); border-color: var(--lyng); }
-  .seksjon { margin-top: 24px; }
+  .knapp.fare { color: var(--terra-dyp); border-color: var(--terra); }
+  .knapp.primar { background: var(--terra); border-color: var(--terra); color: var(--ark); }
+  .seksjon { margin-top: 30px; }
   .seksjon h3 {
-    font-family: var(--kond); font-size: 10.5px; font-weight: 700; letter-spacing: .14em;
-    text-transform: uppercase; color: var(--stein); margin: 0 0 4px;
+    font-size: 10.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--terra-dyp); margin: 0 0 8px;
   }
-  .liste { border-top: 1px solid rgba(237,240,234,.09); }
-  .liste .el { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid rgba(237,240,234,.09); font-size: 13px; }
+  .liste { }
+  .liste .el {
+    display: flex; align-items: center; gap: 12px; padding: 16px 18px; margin-bottom: 10px;
+    background: var(--ark); border-radius: 28px; font-size: 14px;
+  }
   .liste .el .info { flex: 1; min-width: 0; }
-  .liste .el .info b { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .liste .el .info small { color: var(--stein); font-family: var(--data); font-size: 11px; }
+  .liste .el .info b { display: block; font-weight: 600; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .liste .el .info small { color: var(--ink-svak); font-size: 12.5px; }
   .liste .el button {
-    padding: 8px 11px; border-radius: 8px; border: 1px solid rgba(237,240,234,.16);
-    background: var(--skygge-2); color: var(--papir); font-size: 11px; cursor: pointer;
-    font-family: var(--kond); font-weight: 700; text-transform: uppercase;
+    min-height: 48px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--strek);
+    background: transparent; color: var(--ink); font-size: 13.5px; font-weight: 600; cursor: pointer;
   }
-  .liste .el button.fare { color: var(--fare); }
-  .liste .tom { color: var(--stein); font-size: 12.5px; padding: 11px 0; }
+  .liste .el button.fare { color: var(--terra-dyp); }
+  .liste .tom { color: var(--ink-svak); font-size: 14px; padding: 14px 0; }
 
   /* ---------- koordinatskjerm ---------- */
   .koord {
-    position: absolute; inset: 0; z-index: 1300; background: var(--skygge);
-    display: none; flex-direction: column; justify-content: center; align-items: center;
-    text-align: center; padding: 24px; cursor: pointer;
+    position: absolute; inset: 0; z-index: 1300; background: var(--ark);
+    display: none; flex-direction: column; justify-content: center; align-items: flex-start;
+    text-align: left; padding: 36px 28px; cursor: pointer;
   }
   .koord.apen { display: flex; }
-  .koord .et { font-family: var(--kond); font-weight: 700; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--stein); margin-bottom: 14px; }
-  .koord .stor { font-family: var(--data); font-size: 34px; line-height: 1.35; letter-spacing: -.5px; }
-  .koord .ddm { font-family: var(--data); font-size: 17px; color: var(--mose); margin-top: 16px; line-height: 1.5; }
-  .koord .noy { font-family: var(--data); font-size: 14px; color: var(--stein); margin-top: 18px; }
-  .koord .nod { margin-top: 34px; font-size: 13px; color: var(--fare); font-weight: 600; }
-  .koord .lukk { margin-top: 8px; font-size: 11.5px; color: var(--stein); }
+  .koord .et { font-size: 11px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-hint); }
+  .koord .stor { font-family: var(--disp); font-weight: 400; font-size: 52px; line-height: 1.1; margin-top: 16px; letter-spacing: -.02em; }
+  .koord .ddm { font-weight: 600; font-size: 22px; color: var(--sage-dyp); margin-top: 22px; line-height: 1.5; }
+  .koord .noy { font-weight: 600; font-size: 15px; color: var(--ink-svak); margin-top: 20px; }
+  .koord .nod {
+    margin-top: 32px; background: var(--terra); color: var(--ark); border-radius: 32px;
+    padding: 20px 22px; width: 100%; font-family: var(--disp); font-weight: 400;
+    font-size: 22px; line-height: 1.3;
+  }
+  .koord .lukk { margin-top: 18px; font-size: 13px; font-weight: 600; color: var(--ink-hint); }
 
   /* ---------- popup ---------- */
-  .leaflet-popup-content-wrapper { background: var(--skygge-2); color: var(--papir); border-radius: 12px; }
-  .leaflet-popup-tip { background: var(--skygge-2); }
-  .leaflet-popup-content { margin: 12px 14px; font-size: 13px; }
-  .pop-tit { font-family: var(--kond); font-weight: 700; font-size: 15px; text-transform: uppercase; letter-spacing: .05em; }
-  .pop-meta { font-family: var(--data); font-size: 10.5px; color: var(--stein); margin: 5px 0 9px; line-height: 1.6; }
-  .pop-felt { display: flex; gap: 6px; margin-bottom: 8px; }
+  .leaflet-popup-content-wrapper {
+    background: var(--papir); color: var(--ink); border-radius: 28px;
+    box-shadow: 0 12px 32px rgba(46,43,37,.22);
+  }
+  .leaflet-popup-tip { background: var(--papir); }
+  .leaflet-popup-content { margin: 16px 18px; font-size: 14px; }
+  .pop-tit { font-family: var(--disp); font-weight: 400; font-size: 22px; line-height: 1.15; }
+  .pop-meta { font-size: 12.5px; color: var(--ink-svak); margin: 7px 0 12px; line-height: 1.55; }
+  .pop-felt { display: flex; gap: 8px; margin-bottom: 10px; }
   .pop-felt input {
-    flex: 1; min-width: 0; background: var(--skygge); color: var(--papir);
-    border: 1px solid rgba(237,240,234,.16); border-radius: 8px; padding: 8px; font-size: 13px;
+    flex: 1; min-width: 0; min-height: 48px; background: var(--ark); color: var(--ink);
+    border: 1px solid var(--strek); border-radius: 999px; padding: 10px 16px; font-size: 15px;
   }
-  .pop-felt input.liter { flex: 0 0 58px; font-family: var(--data); }
-  .pop-knapper { display: flex; gap: 6px; flex-wrap: wrap; }
+  .pop-felt input.liter { flex: 0 0 74px; font-family: var(--data); font-weight: 600; text-align: center; padding: 10px 8px; }
+  .pop-knapper { display: flex; gap: 8px; flex-wrap: wrap; }
   .pop-knapper button {
-    flex: 1 1 45%; padding: 9px 6px; border-radius: 8px; border: 1px solid rgba(237,240,234,.16);
-    background: var(--skygge); color: var(--papir); font-size: 11px; cursor: pointer;
-    font-family: var(--kond); font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+    flex: 1 1 44%; min-height: 48px; padding: 0 12px; border-radius: 999px;
+    border: 1px solid var(--strek); background: var(--ark); color: var(--ink);
+    font-size: 13.5px; font-weight: 600; cursor: pointer;
   }
-  .pop-knapper button.slett { color: var(--fare); }
+  .pop-knapper button.slett { color: var(--terra-dyp); }
 
-  .puls { width: 16px; height: 16px; border-radius: 50%; background: var(--sol); border: 2px solid var(--papir); animation: puls 1.2s ease-out infinite; }
-  @keyframes puls { 0% { box-shadow: 0 0 0 0 rgba(217,164,65,.7); } 100% { box-shadow: 0 0 0 22px rgba(217,164,65,0); } }
+  .puls { width: 18px; height: 18px; border-radius: 50%; background: var(--terra); border: 3px solid var(--ark); animation: puls 1.2s ease-out infinite; }
+  @keyframes puls { 0% { box-shadow: 0 0 0 0 rgba(198,113,57,.6); } 100% { box-shadow: 0 0 0 24px rgba(198,113,57,0); } }
 
   /* Posisjon med kompassretning. Barnenoden roteres; Leaflet beholder sin egen transform på ikonet. */
-  .posisjon-markor { width: 38px; height: 38px; position: relative; }
+  .posisjon-markor { width: 40px; height: 40px; position: relative; }
   .posisjon-retning { position: absolute; inset: 0; transform-origin: 50% 50%; transition: transform .12s linear; }
   .posisjon-kjegle {
-    position: absolute; left: 12px; top: -1px; width: 14px; height: 22px;
-    background: rgba(123,140,196,.62); clip-path: polygon(50% 0, 100% 100%, 50% 78%, 0 100%);
-    filter: drop-shadow(0 1px 1px rgba(16,26,22,.8));
+    position: absolute; left: 13px; top: -4px; width: 14px; height: 24px;
+    background: var(--terra-dyp); clip-path: polygon(50% 0, 100% 100%, 50% 76%, 0 100%);
+    filter: drop-shadow(0 1px 2px rgba(46,43,37,.4));
   }
   .posisjon-markor.ukjent .posisjon-kjegle { display: none; }
   .posisjon-prikk {
-    position: absolute; left: 10px; top: 10px; width: 18px; height: 18px;
-    border-radius: 50%; background: var(--lyng-dyp); border: 3px solid var(--papir);
-    box-shadow: 0 1px 4px rgba(16,26,22,.75);
+    position: absolute; left: 9px; top: 9px; width: 22px; height: 22px;
+    border-radius: 50%; background: var(--terra); border: 4px solid var(--ark);
+    box-shadow: 0 3px 10px rgba(46,43,37,.35);
   }
 
   /* ---------- strømsparing ---------- */
   .spar {
-    position: absolute; inset: 0; z-index: 2000; background: #000;
-    display: none; flex-direction: column; justify-content: space-between; align-items: center;
-    padding: 44px 20px; text-align: center; touch-action: none;
-    color: #2E3A34; font-family: var(--data);
+    position: absolute; inset: 0; z-index: 2000; background: #181613;
+    display: none; flex-direction: column; justify-content: space-between; align-items: flex-start;
+    padding: 52px 28px; text-align: left; touch-action: none;
+    color: #3F3A33; font-family: var(--tekst);
   }
   .spar.apen { display: flex; }
-  .spar .hode { font-size: 9.5px; letter-spacing: .2em; display: flex; align-items: center; gap: 8px; }
-  .spar .dot2 { width: 6px; height: 6px; border-radius: 50%; background: #202A24; transition: background .3s; }
-  .spar .dot2.blink { background: #6E8C7A; }
-  .spar .midt { font-size: 14px; line-height: 2.1; }
-  .spar .midt .kl { display: block; font-size: 31px; color: #3E4C44; margin-bottom: 12px; letter-spacing: -1px; }
-  .spar .fot { font-size: 9.5px; letter-spacing: .16em; }
+  .spar .hode { font-size: 10.5px; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; display: flex; align-items: center; gap: 10px; color: #645C50; }
+  .spar .dot2 { width: 8px; height: 8px; border-radius: 50%; background: #2A2A24; transition: background .3s; }
+  .spar .dot2.blink { background: #8FA073; }
+  .spar .midt { font-size: 19px; font-weight: 600; line-height: 1.9; }
+  .spar .midt .kl { display: block; font-family: var(--disp); font-weight: 400; font-size: 62px; line-height: 1; color: #474238; margin-bottom: 18px; }
+  .spar .fot { font-size: 10.5px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; }
 
   .brod {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 1050;
-    background: var(--skygge-2); border: 1px solid rgba(237,240,234,.16); border-radius: 12px;
-    padding: 13px 18px; font-size: 13.5px; text-align: center; opacity: 0; pointer-events: none;
-    transition: opacity .25s ease; max-width: 80vw;
+    background: rgba(32,30,29,.9); color: var(--ark); border-radius: 999px;
+    padding: 14px 24px; font-size: 16px; font-weight: 600; text-align: center;
+    opacity: 0; pointer-events: none; transition: opacity .25s ease; max-width: 82vw;
+    box-shadow: 0 12px 32px rgba(46,43,37,.3);
   }
   .brod.vis { opacity: 1; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
@@ -306,20 +399,23 @@
 
 <div class="topp">
   <div class="dekning"><i id="dekningBar"></i></div>
-  <div class="chips">
-    <div class="chip" id="chipGps" style="cursor:pointer"><b id="vGps">søker</b><span class="et">nøyaktighet</span></div>
-    <div class="chip"><b id="vAreal">0 %</b><span class="et">undersøkt i synsfelt</span></div>
-    <div class="chip"><b id="vDist">0,0</b><span class="et">tur km</span></div>
-    <div class="chip sekk" id="chipSekk" style="display:none;cursor:pointer"><b><span id="sekkPil">▲</span><span id="vSekk">—</span></b><span class="et" id="etSekk">til sekken</span></div>
-  </div>
-  <div class="turkontroll">
-    <button id="btnTur" title="Start, pause eller fortsett tur">▶ Start tur</button>
+  <div class="tallstripe">
+    <div class="tall"><b id="vTid">—</b><span class="et">timer</span></div>
+    <span class="delelinje"></span>
+    <div class="tall"><b id="vDist">0,0</b><span class="et">km</span></div>
+    <span class="fyll"></span>
     <button id="btnAktivitet" data-tilstand="ukjent" title="Trykk for å bytte Auto / Plukker / Går / Transport" disabled>Auto · —</button>
-    <button id="btnTurSlutt" title="Avslutt og lagre turen">■ Avslutt tur</button>
+  </div>
+  <div class="underrad">
+    <button id="btnTur" title="Start, pause eller fortsett tur">▶ Start tur</button>
+    <button id="btnTurSlutt" title="Avslutt og lagre turen">■ Avslutt</button>
+    <button class="chip" id="chipGps" title="Vis posisjonen i store tall"><b id="vGps">søker</b><span class="et">nøyaktighet</span></button>
+    <div class="chip"><b id="vAreal">0 %</b><span class="et">undersøkt</span></div>
+    <button class="chip" id="chipSekk" style="display:none"><b><span id="sekkPil">▲</span><span id="vSekk">—</span></b><span class="et" id="etSekk">til sekken</span></button>
   </div>
   <div class="stripe" id="solStripe"><div class="tekst" id="solTekst"></div></div>
   <div class="stripe" id="benchBar">
-    <div class="tekst" id="benchTekst">⏱ 0:00</div>
+    <div class="tekst" id="benchTekst">0:00</div>
     <button class="primar" id="btnBenchFerdig">Ferdig</button>
     <button class="fare" id="btnBenchAvbryt">Avbryt</button>
   </div>
@@ -333,21 +429,29 @@
 </div>
 
 <div class="verktoy">
+  <div class="vifte" id="vifte">
+    <button id="btnTaake" class="pa" data-navn="Tåke" title="Tåke av/på">☁</button>
+    <button id="btnBench" data-navn="Måling" title="Start måling">⏱</button>
+    <button id="btnSone" data-navn="Plukksone" title="Ny plukksone">⬡</button>
+    <button id="btnLag" data-navn="Kart og turlag" title="Bytt kartlag">▤</button>
+    <button id="btnSpar" data-navn="Strømsparing" title="Strømsparing">◐</button>
+    <button id="btnMeny" data-navn="Innstillinger" title="Meny">☰</button>
+  </div>
   <button id="btnFolg" class="pa" title="Følg posisjon">◎</button>
-  <button id="btnTaake" class="pa" title="Tåke av/på">☁</button>
-  <button id="btnBench" title="Start måling">⏱</button>
-  <button id="btnSone" title="Ny plukksone">⬡</button>
-  <button id="btnSpar" title="Strømsparing">◐</button>
-  <button id="btnLag" title="Bytt kartlag">▤</button>
-  <button id="btnMeny" title="Meny">☰</button>
+  <button id="btnVerktoy" title="Verktøy">⋯</button>
 </div>
 
 <div class="rail">
-  <button data-type="funn"><span class="dot" style="background:#7B8CC4"></span>Bær</button>
-  <button data-type="sopp"><span class="dot" style="background:#D6A85F"></span>Sopp</button>
-  <button data-type="senere"><span class="dot" style="background:#A8C08A"></span>Tilbake</button>
-  <button data-type="tomt"><span class="dot" style="background:#8A9490"></span>Tomt</button>
-  <button data-type="sekk"><span class="dot" style="background:#D9A441"></span>Sekk</button>
+  <div class="hurtig">
+    <button data-art="blabaer" data-kategori="baer"><span class="dot" style="background:#667BC1"></span>Blåbær</button>
+    <button data-art="tyttebaer" data-kategori="baer"><span class="dot" style="background:#C4545C"></span>Tyttebær</button>
+    <button data-type="senere"><span class="dot" style="background:#A8C08A"></span>Tilbake</button>
+    <button data-type="sekk"><span class="dot" style="background:#D9A441"></span>Sekken</button>
+  </div>
+  <div class="hovedrad">
+    <button id="btnSol" title="Solmodus — maks kontrast">☀</button>
+    <button id="btnMerk" title="Sett merke her"><svg width="34" height="34" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M24 43C24 34 21 27 22 17c.5-5 1.5-8 2-11" stroke="#F9F4ED" stroke-width="3.4" stroke-linecap="round"/><circle cx="14" cy="27" r="5.4" fill="#F9F4ED"/><circle cx="33" cy="21" r="5.8" fill="#F9F4ED"/><circle cx="15" cy="15" r="4.6" fill="#F9F4ED"/><circle cx="31" cy="9" r="4.2" fill="#F9F4ED"/></svg>Merk her</button>
+  </div>
 </div>
 
 <div class="ark" id="ark"></div>
@@ -362,7 +466,7 @@
 </div>
 
 <div class="panel" id="panel">
-  <h2>Innstillinger<span class="ver">v3.3</span></h2>
+  <h2>Innstillinger<span class="ver">v3.4</span></h2>
   <p class="hjelp" id="lagringStatus"></p>
   <p class="hjelp" id="nativStatus" style="display:none"></p>
 
@@ -632,7 +736,7 @@ function settVistTur(id, flyttKart = true) {
 function pakk() {
   return JSON.stringify({
     schemaVersion: SKJEMA,
-    appVersion: "3.3",
+    appVersion: "3.4",
     meta: { grid: S.grid, lat0: S.lat0 },
     S, merker, soner, bench, hull,
     celler: pakkCeller(),
@@ -982,7 +1086,7 @@ const Taake = L.Layer.extend({
     };
 
     if (S.fog) {
-      ctx.fillStyle = "rgba(16,26,22,0.74)";
+      ctx.fillStyle = "rgba(220,211,196,0.86)";
       ctx.fillRect(0, 0, st.x, st.y);
       ctx.globalCompositeOperation = "destination-out";
       ctx.filter = "blur(4px)";
@@ -1017,7 +1121,7 @@ const Taake = L.Layer.extend({
 const taake = new Taake();
 map.addLayer(taake);
 
-const sporLinje = L.polyline([], { color: "#7B8CC4", weight: 2.5, opacity: .85 }).addTo(map);
+const sporLinje = L.polyline([], { color: "#C67139", weight: 4, opacity: .92 }).addTo(map);
 const posSirkel = L.marker([0, 0], {
   interactive: false,
   icon: L.divIcon({
@@ -1025,7 +1129,7 @@ const posSirkel = L.marker([0, 0], {
     html: '<div class="posisjon-markor ukjent"><div class="posisjon-retning"><div class="posisjon-kjegle"></div></div><div class="posisjon-prikk"></div></div>'
   })
 });
-const noySirkel = L.circle([0, 0], { radius: 0, color: "#7B8CC4", weight: 1, fillOpacity: .07 });
+const noySirkel = L.circle([0, 0], { radius: 0, color: "#C67139", weight: 1, fillOpacity: .08 });
 const merkeLag = L.layerGroup().addTo(map);
 const soneLag = L.layerGroup().addTo(map);
 const soneSkisse = L.layerGroup().addTo(map);
@@ -1089,7 +1193,7 @@ function oppdaterBenchBar() {
   const t = aktivTur();
   const distNaa = benchAktiv.frosset ? benchAktiv.dist1 : (t ? t.distanse : distanse);
   const d = Math.round(distNaa - benchAktiv.dist0);
-  document.getElementById("benchTekst").textContent = `⏱ ${mm}:${ss} · ${d} m · ${benchAktiv.metode}`;
+  document.getElementById("benchTekst").textContent = `${mm}:${ss} · ${d} m · ${benchAktiv.metode}`;
 }
 
 function ferdigBench() {
@@ -1180,7 +1284,7 @@ function soneIgang(modus) {
 function oppdaterSoneBar() {
   if (!soneModus) return;
   document.getElementById("soneTekst").textContent =
-    (soneModus.modus === "tegn" ? "⬡ Hjørner: " : "⬡ Grensepunkter: ") + soneModus.pkt.length;
+    (soneModus.modus === "tegn" ? "Hjørner: " : "Grensepunkter: ") + soneModus.pkt.length;
   soneSkisse.clearLayers();
   if (soneModus.pkt.length) {
     L.polyline(soneModus.pkt, { color: "#A8C08A", weight: 3, dashArray: "5 6" }).addTo(soneSkisse);
@@ -1436,7 +1540,7 @@ function tegnMerker() {
     if (filterAar !== null && new Date(m.t).getFullYear() !== filterAar) continue;
     const f = merkeInfo(m);
     const mk = L.circleMarker([m.lat, m.lng], {
-      radius: m.type === "sekk" ? 9 : 7, color: "#101A16", weight: 2,
+      radius: m.type === "sekk" ? 10 : 8, color: "#F9F4ED", weight: 3,
       fillColor: f.farge, fillOpacity: 1
     }).addTo(merkeLag);
     mk.bindPopup(() => popupHtml(m), { closeButton: false, minWidth: 205 });
@@ -1609,7 +1713,7 @@ function startTur(modus = "auto") {
   distanse = 0;
   retur = false;
   document.getElementById("etSekk").textContent = "til sekken";
-  sporLinje.setStyle({ color: "#7B8CC4", weight: 2.5 });
+  sporLinje.setStyle({ color: "#C67139", weight: 4 });
   sporLinje.setLatLngs([]);
   nullstillAktivitetsfilter();
   fyllAar();
@@ -1658,7 +1762,7 @@ function avsluttTur() {
   nullstillAktivitetsfilter();
   retur = false;
   document.getElementById("etSekk").textContent = "til sekken";
-  sporLinje.setStyle({ color: "#7B8CC4", weight: 2.5 });
+  sporLinje.setStyle({ color: "#C67139", weight: 4 });
   oppdaterTurUI(); oppdaterHud(); fyllLister(); lagreNa();
   melding("Tur avsluttet");
 }
@@ -1745,8 +1849,10 @@ function oppdaterTurUI() {
   const btn = document.getElementById("btnTur");
   const slutt = document.getElementById("btnTurSlutt");
   const akt = document.getElementById("btnAktivitet");
+  const tid = document.getElementById("vTid");
   btn.classList.remove("aktiv", "pauset");
   if (!t) {
+    tid.textContent = "—";
     btn.textContent = "▶ Start tur";
     slutt.classList.remove("vis");
     akt.disabled = true;
@@ -1755,6 +1861,7 @@ function oppdaterTurUI() {
     return;
   }
   slutt.classList.add("vis");
+  tid.textContent = fmtVarighet(turVarighet(t));
   akt.disabled = !!benchAktiv;
   if (t.status === "pauset") {
     btn.classList.add("pauset");
@@ -2079,7 +2186,7 @@ document.getElementById("chipSekk").addEventListener("click", () => {
   if (!merker.find(m => m.type === "sekk")) return;
   if (!aktivTur() || aktivTur().spor.length < 2) { melding("Start en tur for retur via ditt eget spor"); return; }
   retur = !retur;
-  sporLinje.setStyle({ color: retur ? "#D9A441" : "#7B8CC4", weight: retur ? 5 : 2.5 });
+  sporLinje.setStyle({ color: retur ? "#D9A441" : "#C67139", weight: retur ? 6 : 4 });
   document.getElementById("etSekk").textContent = retur ? "via sporet" : "til sekken";
   melding(retur ? "Retur: følg den gule linja tilbake" : "Retur av");
   oppdaterHud();
@@ -2406,7 +2513,7 @@ function gpx() {
   }).join("\n");
   lastNed(`lyng-${new Date().toISOString().slice(0, 10)}.gpx`,
 `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="Lyng 3.3" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="Lyng 3.4" xmlns="http://www.topografix.com/GPX/1/1">
 ${wpt}
 ${trk}
 </gpx>`, "application/gpx+xml");
@@ -2431,12 +2538,32 @@ function visArk(html) {
 }
 function lukkArk() { document.getElementById("ark").classList.remove("apen"); }
 
-document.querySelectorAll(".rail button").forEach(b =>
+document.querySelectorAll(".hurtig button").forEach(b =>
   b.addEventListener("click", () => {
-    if (b.dataset.type === "funn") velgArt("baer");
+    if (b.dataset.art) nyttMerke("funn", null, b.dataset.kategori || "baer", b.dataset.art);
+    else if (b.dataset.type === "funn") velgArt("baer");
     else if (b.dataset.type === "sopp") velgArt("sopp");
     else nyttMerke(b.dataset.type);
   }));
+
+/* Verktøyvifta: seks sjeldne funksjoner bak én knapp */
+const btnVerktoy = document.getElementById("btnVerktoy");
+const vifte = document.getElementById("vifte");
+function lukkVifte() { vifte.classList.remove("apen"); btnVerktoy.classList.remove("apen"); }
+btnVerktoy.addEventListener("click", () => {
+  vifte.classList.toggle("apen");
+  btnVerktoy.classList.toggle("apen", vifte.classList.contains("apen"));
+});
+vifte.querySelectorAll("button").forEach(b => b.addEventListener("click", lukkVifte));
+map.on("click dragstart", lukkVifte);
+
+/* Solmodus: maks kontrast i sterkt lys */
+document.getElementById("btnSol").addEventListener("click", () => {
+  const pa = document.body.classList.toggle("sol");
+  melding(pa ? "Solmodus — maks kontrast" : "Normal kontrast");
+});
+
+document.getElementById("btnMerk").addEventListener("click", () => { lukkVifte(); visMerkeArk(null); });
 
 document.getElementById("btnFolg").addEventListener("click", e => {
   aktiverKompass();
@@ -2462,8 +2589,7 @@ document.getElementById("btnTaake").addEventListener("click", () => {
 map.on("click", e => {
   if (soneModus && soneModus.modus === "tegn") soneLeggTil(e.latlng.lat, e.latlng.lng);
 });
-map.on("contextmenu", e => {
-  if (soneModus) return;
+function visMerkeArk(punkt) {
   const typer = [
     { type: "funn", navn: "Bær", farge: FARGER.funn.farge },
     { type: "sopp", navn: "Sopp", farge: "#D6A85F" },
@@ -2475,13 +2601,14 @@ map.on("contextmenu", e => {
   document.querySelectorAll("#ark [data-ark-type]").forEach(b => {
     b.onclick = () => {
       const type = b.dataset.arkType;
-      if (type === "funn") velgArt("baer", e.latlng);
-      else if (type === "sopp") velgArt("sopp", e.latlng);
-      else { lukkArk(); nyttMerke(type, e.latlng); }
+      if (type === "funn") velgArt("baer", punkt);
+      else if (type === "sopp") velgArt("sopp", punkt);
+      else { lukkArk(); nyttMerke(type, punkt); }
     };
   });
   document.getElementById("akAvbryt").onclick = lukkArk;
-});
+}
+map.on("contextmenu", e => { if (soneModus) return; visMerkeArk(e.latlng); });
 
 function visKartvalg() {
   visArk(`<h4>Velg kart og turlag</h4>

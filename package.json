@@ -1,12 +1,14 @@
 {
   "name": "lyng",
-  "version": "3.3.0",
+  "version": "3.4.0",
   "private": true,
-  "description": "Lyng — blåbærsporing",
+  "description": "Lyng — bær- og soppsporing",
   "dependencies": {
     "@capacitor/android": "7.6.8",
     "@capacitor/core": "7.6.8",
     "@capacitor-community/background-geolocation": "1.2.26",
+    "@fontsource/caprasimo": "^5",
+    "@fontsource/figtree": "^5",
     "leaflet": "1.9.4"
   },
   "devDependencies": {

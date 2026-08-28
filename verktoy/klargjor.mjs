@@ -4,6 +4,8 @@ import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 
 const RES = "android/app/src/main/res";
 const bygg = process.env.BYGG || "1";
+const pakkeVersjon = JSON.parse(readFileSync("package.json", "utf8")).version;
+const versjonsserie = pakkeVersjon.split(".").slice(0, 2).join(".");
 
 /* 1. Strenger som bakgrunnstjenesten leser */
 const strSti = `${RES}/values/strings.xml`;
@@ -38,6 +40,6 @@ let g = readFileSync(gSti, "utf8");
 const forKode = g.match(/versionCode\s+\d+/);
 const forNavn = g.match(/versionName\s+"[^"]*"/);
 g = g.replace(/versionCode\s+\d+/, `versionCode ${bygg}`);
-g = g.replace(/versionName\s+"[^"]*"/, `versionName "3.3.${bygg}"`);
+g = g.replace(/versionName\s+"[^"]*"/, `versionName "${versjonsserie}.${bygg}"`);
 writeFileSync(gSti, g);
-console.log(`versjon: ${forKode?.[0]} -> versionCode ${bygg}, ${forNavn?.[0]} -> "3.3.${bygg}"`);
+console.log(`versjon: ${forKode?.[0]} -> versionCode ${bygg}, ${forNavn?.[0]} -> "${versjonsserie}.${bygg}"`);
