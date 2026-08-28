@@ -56,13 +56,16 @@ jobs:
           mkdir -p ~/.android
           cp verktoy/debug.keystore ~/.android/debug.keystore
 
-      - name: Legg web-appen i www/
-        run: |
-          mkdir -p www
-          cp lyng.html www/index.html
-
       - name: Installer avhengigheter
         run: npm install
+
+      - name: Legg web-appen i www/
+        run: |
+          mkdir -p www/vendor
+          cp lyng.html www/index.html
+          cp node_modules/leaflet/dist/leaflet.js www/vendor/leaflet.js
+          cp node_modules/leaflet/dist/leaflet.css www/vendor/leaflet.css
+          cp -R node_modules/leaflet/dist/images www/vendor/images
 
       - name: Lag Android-prosjektet
         run: npx cap add android

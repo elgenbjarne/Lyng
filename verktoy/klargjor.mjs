@@ -38,7 +38,7 @@ let g = readFileSync(gSti, "utf8");
 const forKode = g.match(/versionCode\s+\d+/);
 const forNavn = g.match(/versionName\s+"[^"]*"/);
 g = g.replace(/versionCode\s+\d+/, `versionCode ${bygg}`);
-g = g.replace(/versionName\s+"[^"]*"/, `versionName "3.1.${bygg}"`);
+g = g.replace(/versionName\s+"[^"]*"/, `versionName "3.2.${bygg}"`);
 writeFileSync(gSti, g);
-console.log(`versjon: ${forKode?.[0]} -> versionCode ${bygg}, ${forNavn?.[0]} -> "3.1.${bygg}"`);
+console.log(`versjon: ${forKode?.[0]} -> versionCode ${bygg}, ${forNavn?.[0]} -> "3.2.${bygg}"`);
 

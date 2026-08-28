@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <title>Lyng — blåbærsporing</title>
-<link href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" rel="stylesheet" />
+<link href="vendor/leaflet.css" rel="stylesheet" onerror="this.onerror=null;this.href='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'" />
 <style>
   :root {
     --skygge: #101A16;
@@ -38,7 +38,7 @@
   /* ---------- toppfelt ---------- */
   .topp {
     position: absolute; top: 0; left: 0; right: 0; z-index: 500;
-    padding: 8px 8px 10px;
+    padding: calc(8px + env(safe-area-inset-top)) 8px 10px;
     background: linear-gradient(180deg, rgba(16,26,22,.93) 55%, rgba(16,26,22,0));
     pointer-events: none;
   }
@@ -83,10 +83,29 @@
   #solStripe .tekst { color: var(--sol); }
   #solStripe.morkt .tekst { color: var(--fare); }
 
+  .turkontroll {
+    display: flex; gap: 6px; margin-top: 7px; pointer-events: auto;
+  }
+  .turkontroll button {
+    min-height: 38px; border-radius: 10px; border: 1px solid rgba(237,240,234,.14);
+    background: rgba(27,42,36,.94); color: var(--papir); padding: 7px 10px; cursor: pointer;
+    font-family: var(--kond); font-weight: 700; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase;
+  }
+  #btnTur { flex: 1.25; text-align: left; }
+  #btnTur.aktiv { background: rgba(58,74,128,.96); border-color: var(--lyng); }
+  #btnTur.pauset { border-color: var(--sol); color: var(--sol); }
+  #btnTurSlutt { flex: 0 0 auto; color: var(--fare); display: none; }
+  #btnAktivitet { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #btnAktivitet[data-tilstand="plukk"] { border-color: var(--mose); color: var(--mose); }
+  #btnAktivitet[data-tilstand="gaa"] { border-color: var(--lyng); color: var(--lyng); }
+  #btnAktivitet[data-tilstand="transport"] { border-color: var(--sol); color: var(--sol); }
+  #btnAktivitet[data-tilstand="stille"], #btnAktivitet[data-tilstand="ukjent"] { color: var(--stein); }
+  #btnAktivitet:disabled { opacity: .55; cursor: default; }
+
   /* ---------- knapperad ---------- */
   .rail {
     position: absolute; left: 0; right: 0; bottom: 0; z-index: 500;
-    padding: 14px 8px 10px;
+    padding: 14px 8px calc(10px + env(safe-area-inset-bottom));
     background: linear-gradient(0deg, rgba(16,26,22,.94) 62%, rgba(16,26,22,0));
     display: flex; gap: 6px;
   }
@@ -103,11 +122,11 @@
   .rail button:focus-visible { outline: 2px solid var(--papir); outline-offset: 2px; }
 
   .verktoy {
-    position: absolute; right: 8px; bottom: calc(var(--rail) + 28px); z-index: 500;
+    position: absolute; right: 8px; bottom: calc(var(--rail) + 28px + env(safe-area-inset-bottom)); z-index: 500;
     display: flex; flex-direction: column; gap: 6px;
   }
   .verktoy button {
-    width: 42px; height: 42px; border-radius: 12px; border: 1px solid rgba(237,240,234,.12);
+    width: 48px; height: 48px; border-radius: 12px; border: 1px solid rgba(237,240,234,.12);
     background: rgba(27,42,36,.93); color: var(--papir); font-size: 17px; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
   }
@@ -118,7 +137,7 @@
   .ark {
     position: absolute; left: 0; right: 0; bottom: 0; z-index: 1100;
     background: var(--skygge-2); border-top: 1px solid rgba(237,240,234,.14);
-    border-radius: 18px 18px 0 0; padding: 16px 16px 22px; display: none;
+    border-radius: 18px 18px 0 0; padding: 16px 16px calc(22px + env(safe-area-inset-bottom)); display: none;
   }
   .ark.apen { display: block; }
   .ark h4 { margin: 0 0 12px; font-family: var(--kond); font-weight: 700; font-size: 15px; text-transform: uppercase; letter-spacing: .06em; }
@@ -148,7 +167,7 @@
   /* ---------- panel ---------- */
   .panel {
     position: absolute; inset: 0; z-index: 1200; background: var(--skygge);
-    padding: 20px 18px; overflow-y: auto; display: none;
+    padding: calc(20px + env(safe-area-inset-top)) 18px calc(20px + env(safe-area-inset-bottom)); overflow-y: auto; display: none;
   }
   .panel.apen { display: block; }
   .panel h2 { font-family: var(--kond); font-weight: 700; font-size: 23px; margin: 0 0 4px; }
@@ -257,9 +276,14 @@
   <div class="dekning"><i id="dekningBar"></i></div>
   <div class="chips">
     <div class="chip" id="chipGps" style="cursor:pointer"><b id="vGps">søker</b><span class="et">nøyaktighet</span></div>
-    <div class="chip"><b id="vAreal">0 %</b><span class="et">dekket i synsfelt</span></div>
-    <div class="chip"><b id="vDist">0,0</b><span class="et">gått km</span></div>
+    <div class="chip"><b id="vAreal">0 %</b><span class="et">undersøkt i synsfelt</span></div>
+    <div class="chip"><b id="vDist">0,0</b><span class="et">tur km</span></div>
     <div class="chip sekk" id="chipSekk" style="display:none;cursor:pointer"><b><span id="sekkPil">▲</span><span id="vSekk">—</span></b><span class="et" id="etSekk">til sekken</span></div>
+  </div>
+  <div class="turkontroll">
+    <button id="btnTur" title="Start, pause eller fortsett tur">▶ Start tur</button>
+    <button id="btnAktivitet" data-tilstand="ukjent" title="Trykk for å bytte Auto / Plukker / Går / Transport" disabled>Auto · —</button>
+    <button id="btnTurSlutt" title="Avslutt tur">Avslutt</button>
   </div>
   <div class="stripe" id="solStripe"><div class="tekst" id="solTekst"></div></div>
   <div class="stripe" id="benchBar">
@@ -305,9 +329,15 @@
 </div>
 
 <div class="panel" id="panel">
-  <h2>Innstillinger<span class="ver">v3.1</span></h2>
+  <h2>Innstillinger<span class="ver">v3.2</span></h2>
   <p class="hjelp" id="lagringStatus"></p>
   <p class="hjelp" id="nativStatus" style="display:none"></p>
+
+  <div class="seksjon">
+    <h3>Turer</h3>
+    <p class="hjelp" id="turOppsummering" style="margin-bottom:6px"></p>
+    <div class="liste" id="turListe"></div>
+  </div>
 
   <div class="seksjon">
     <h3>Soner</h3>
@@ -327,8 +357,12 @@
       <select id="setGrid"><option value="8">8 m</option><option value="12">12 m</option><option value="20">20 m</option></select>
     </div>
     <div class="rad">
-      <label>Synsvidde<small>Radius som ryddes rundt deg</small></label>
+      <label>Plukkeradius<small>Område som regnes som undersøkt når du plukker</small></label>
       <select id="setRadius"><option value="8">8 m</option><option value="15">15 m</option><option value="25">25 m</option><option value="40">40 m</option></select>
+    </div>
+    <div class="rad">
+      <label>Gåradius<small>Smal korridor som bare markeres som passert</small></label>
+      <select id="setWalkRadius"><option value="3">3 m</option><option value="5">5 m</option><option value="8">8 m</option><option value="12">12 m</option></select>
     </div>
     <div class="rad">
       <label>Krev nøyaktighet<small>Dårligere fikser forkastes</small></label>
@@ -367,7 +401,7 @@
     <button class="knapp" id="btnGpx">Eksporter GPX</button>
     <button class="knapp" id="btnBackup">Lagre sikkerhetskopi (JSON)</button>
     <button class="knapp" id="btnImport">Importer sikkerhetskopi (JSON)</button>
-    <button class="knapp fare" id="btnNullstillSpor">Slett dagens gålinje</button>
+    <button class="knapp fare" id="btnNullstillSpor">Slett vist gålinje</button>
     <button class="knapp fare" id="btnNullstillAlt">Slett alt</button>
   </div>
 
@@ -384,7 +418,10 @@
 
 <div class="brod" id="brod"></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="vendor/leaflet.js"></script>
+<script>
+if (!window.L) document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"><\/script>');
+</script>
 <script>
 "use strict";
 
@@ -392,6 +429,8 @@
    1. Tilstand og lagring
    ============================================================ */
 const NOKKEL = "lyng:data";
+const SKJEMA = 32;
+const DEKNING = { passert: 1, undersokt: 2 };
 const FARGER = {
   funn:   { farge: "#7B8CC4", navn: "Bær her" },
   senere: { farge: "#A8C08A", navn: "Kom tilbake" },
@@ -402,28 +441,157 @@ const FARGER = {
   bratt:  { farge: "#C4614B", navn: "For bratt" }
 };
 const standard = {
-  grid: 12, radius: 15, acc: 35, wake: 1, fog: 1, track: 1,
+  grid: 12, radius: 15, walkRadius: 5, acc: 35, wake: 1, fog: 1, track: 1,
   rate: 1, soner: 1, lag: "topo", lat0: null, aar: "alle",
-  spar: 2, bg: 0
+  spar: 2, bg: 0, sporModus: "auto"
 };
 
 let S = Object.assign({}, standard);
-let celler = new Map();      // "x,y" -> siste år
-let merker = [];             // {id,type,lat,lng,t,liter,notat}
+// "x,y" -> { "2026": 1|2, ... }. 1 = passert, 2 = undersøkt/plukket.
+let celler = new Map();
+let merker = [];             // {id,type,lat,lng,t,liter,notat,turId?}
 let soner = [];              // {id,navn,pkt:[[lat,lng]...],t}
-let bench = [];              // {id,t0,t1,liter,metode,dist,celler:[],lat,lng}
-let spor = [];
-let distanse = 0;
+let bench = [];              // {id,t0,t1,liter,metode,dist,celler:[],lat,lng,turId?}
+let turer = [];              // {id,t0,t1,status,distanse,spor:[[lat,lng,t,tilstand?,acc?]],sesong}
+let aktivTurId = null;
+let visTurId = null;
+let spor = [];               // peker på sporet til turen som vises
+let distanse = 0;            // distanse til turen som vises
 let sisteFix = null;
 let posisjon = null;
 let lagringVirker = null;
 
+function normaliserHistorikk(h) {
+  const ut = {};
+  if (!h || typeof h !== "object") return ut;
+  for (const [aar, v] of Object.entries(h)) {
+    const n = typeof v === "object" && v != null ? +(v.nivaa || v.level || 0) : +v;
+    if (n >= DEKNING.passert) ut[String(aar)] = Math.min(DEKNING.undersokt, n);
+  }
+  return ut;
+}
+
+function settCelleNivaa(k, aar, nivaa) {
+  const a = String(aar);
+  const h = normaliserHistorikk(celler.get(k));
+  if ((h[a] || 0) >= nivaa) return false;
+  h[a] = nivaa;
+  celler.set(k, h);
+  return true;
+}
+
+function celleNivaa(k, filterAar) {
+  const h = celler.get(k);
+  if (!h) return 0;
+  if (filterAar != null) return +(h[String(filterAar)] || 0);
+  let maks = 0;
+  for (const v of Object.values(h)) maks = Math.max(maks, +(typeof v === "object" ? v.nivaa : v) || 0);
+  return maks;
+}
+
+function celleAarstall() {
+  const aar = new Set();
+  for (const [, h] of celler) for (const a of Object.keys(h || {})) aar.add(+a);
+  return aar;
+}
+
+function antallDekningsceller(minNivaa, filterAar) {
+  let n = 0;
+  for (const [k] of celler) if (celleNivaa(k, filterAar) >= minNivaa) n++;
+  return n;
+}
+
+function pakkCeller() {
+  const years = {};
+  for (const [k, h] of celler) {
+    for (const [aar, raw] of Object.entries(h || {})) {
+      const nivaa = +(typeof raw === "object" ? raw.nivaa : raw) || 0;
+      if (nivaa < DEKNING.passert) continue;
+      const y = years[aar] || (years[aar] = { passert: [], undersokt: [] });
+      (nivaa >= DEKNING.undersokt ? y.undersokt : y.passert).push(k);
+    }
+  }
+  return { version: 2, years };
+}
+
+function lastCeller(data) {
+  celler = new Map();
+  if (!data || typeof data !== "object") return;
+  // v3.2-format
+  if (+data.version === 2 && data.years && typeof data.years === "object") {
+    for (const [aar, y] of Object.entries(data.years)) {
+      for (const k of (y && y.passert) || []) settCelleNivaa(k, aar, DEKNING.passert);
+      for (const k of (y && y.undersokt) || []) settCelleNivaa(k, aar, DEKNING.undersokt);
+    }
+    return;
+  }
+  // v3.1-format: {"2026":["x,y", ...]}. Alt som var ryddet før tolkes som undersøkt.
+  for (const [aar, arr] of Object.entries(data)) {
+    if (!Array.isArray(arr)) continue;
+    for (const k of arr) settCelleNivaa(k, aar, DEKNING.undersokt);
+  }
+}
+
+function aktivTur() {
+  return aktivTurId ? turer.find(t => t.id === aktivTurId) || null : null;
+}
+function vistTur() {
+  return visTurId ? turer.find(t => t.id === visTurId) || null : null;
+}
+function sisteTur() {
+  return turer.length ? [...turer].sort((a, b) => (b.t0 || 0) - (a.t0 || 0))[0] : null;
+}
+
+function sporSegmenter(punkter) {
+  const segmenter = [];
+  let segment = [];
+  for (const p of (punkter || [])) {
+    if (!Array.isArray(p) || p.length < 2) continue;
+    // p[5] betyr at forbindelsen FRA forrige lagrede punkt er brutt
+    // (pause/transport/GPS-hopp). Leaflet får separate del-linjer.
+    if (p[5] && segment.length) {
+      if (segment.length >= 2) segmenter.push(segment);
+      segment = [];
+    }
+    segment.push([p[0], p[1]]);
+  }
+  if (segment.length >= 2) segmenter.push(segment);
+  return segmenter;
+}
+
+function tegnSpor() {
+  if (typeof sporLinje === "undefined") return;
+  sporLinje.setLatLngs(S.track ? sporSegmenter(spor) : []);
+}
+
+function settVistTur(id, flyttKart = true) {
+  const t = turer.find(x => x.id === id) || null;
+  visTurId = t ? t.id : null;
+  spor = t && Array.isArray(t.spor) ? t.spor : [];
+  distanse = t && Number.isFinite(+t.distanse) ? +t.distanse : 0;
+  sisteFix = null;
+  if (typeof sporLinje !== "undefined") {
+    tegnSpor();
+    if (flyttKart && spor.length && sporLinje.getLatLngs().length) map.fitBounds(sporLinje.getBounds().pad(0.15), { maxZoom: 17 });
+  }
+  if (typeof oppdaterHud === "function") oppdaterHud();
+}
+
 function pakk() {
-  const perAar = {};
-  for (const [k, aar] of celler) (perAar[aar] = perAar[aar] || []).push(k);
   return JSON.stringify({
-    S, merker, soner, bench, distanse, hull, celler: perAar,
-    spor: spor.map(p => [ +p[0].toFixed(6), +p[1].toFixed(6), p[2] ])
+    schemaVersion: SKJEMA,
+    appVersion: "3.2",
+    meta: { grid: S.grid, lat0: S.lat0 },
+    S, merker, soner, bench, hull,
+    celler: pakkCeller(),
+    turer: turer.map(t => ({
+      ...t,
+      spor: (t.spor || []).map(p => [
+        +(+p[0]).toFixed(6), +(+p[1]).toFixed(6), p[2], p[3] || undefined,
+        p[4] == null ? undefined : Math.round(+p[4]), p[5] ? 1 : undefined
+      ])
+    })),
+    aktivTurId, visTurId
   });
 }
 
@@ -460,7 +628,19 @@ function lagre() {
 function visLagringStatus() {
   document.getElementById("lagringStatus").textContent = lagringVirker === false
     ? "Kan ikke lagre her. Turen finnes bare så lenge fanen er åpen — ta GPX-eksport før du lukker."
-    : "Tåken forsvinner der du har gått. Alt lagres på enheten din.";
+    : "Turer, undersøkt terreng, soner og merker lagres på enheten din.";
+}
+
+function normaliserTur(t) {
+  if (!t || !t.id) return null;
+  const sporInn = Array.isArray(t.spor) ? t.spor.filter(p => Array.isArray(p) && p.length >= 3) : [];
+  const status = t.t1 ? "avsluttet" : (t.status === "pauset" ? "pauset" : "aktiv");
+  return {
+    id: String(t.id), t0: +t.t0 || Date.now(), t1: t.t1 ? +t.t1 : null,
+    status, distanse: Math.max(0, +t.distanse || 0), spor: sporInn,
+    sesong: +t.sesong || new Date(+t.t0 || Date.now()).getFullYear(),
+    pauseMs: Math.max(0, +t.pauseMs || 0), pauseStart: t.pauseStart ? +t.pauseStart : null
+  };
 }
 
 async function lastInn() {
@@ -471,14 +651,39 @@ async function lastInn() {
     const d = JSON.parse(raa);
     S = Object.assign({}, standard, d.S || {});
     merker = d.merker || [];
-    for (const m of merker) if (m.type === "bil") m.type = "sekk";  // gammelt navn
+    for (const m of merker) if (m.type === "bil") m.type = "sekk";
     soner = d.soner || [];
     bench = d.bench || [];
-    spor = d.spor || [];
     hull = d.hull || [];
-    distanse = d.distanse || 0;
-    celler = new Map();
-    for (const aar in (d.celler || {})) for (const k of d.celler[aar]) celler.set(k, +aar);
+    lastCeller(d.celler || {});
+
+    turer = (d.turer || []).map(normaliserTur).filter(Boolean);
+    // Migrer v3.1 sin ene globale gålinje til en avsluttet historisk tur.
+    if (!turer.length && Array.isArray(d.spor) && d.spor.length) {
+      const t0 = +(d.spor[0][2] || Date.now());
+      const t1 = +(d.spor[d.spor.length - 1][2] || t0);
+      turer.push({
+        id: "v31-" + t0.toString(36), t0, t1, status: "avsluttet",
+        distanse: Math.max(0, +d.distanse || 0), spor: d.spor,
+        sesong: new Date(t0).getFullYear()
+      });
+    }
+
+    const kandidat = turer.find(t => t.id === d.aktivTurId && !t.t1);
+    aktivTurId = kandidat ? kandidat.id : null;
+    // Sikker oppstart: en tur som var aktiv da appen forsvant, åpnes pauset.
+    // Da kan ikke en omstart/reboot begynne å rydde tåke før brukeren trykker Fortsett.
+    if (kandidat && kandidat.status !== "pauset") {
+      kandidat.status = "pauset";
+      kandidat.pauseStart = Date.now();
+    } else if (kandidat && kandidat.status === "pauset" && !kandidat.pauseStart) {
+      kandidat.pauseStart = Date.now();
+    }
+    const v = aktivTurId || (turer.some(t => t.id === d.visTurId) ? d.visTurId : (sisteTur() || {}).id);
+    visTurId = v || null;
+    const t = vistTur();
+    spor = t ? t.spor : [];
+    distanse = t ? t.distanse : 0;
   } catch (e) { /* ødelagt lagring — start blankt */ }
 }
 
@@ -492,20 +697,22 @@ function cellStorrelse() {
   return S.grid / Math.cos(lat * Math.PI / 180);
 }
 
-function merkBesokt(lat, lng, radius) {
+function merkDekning(lat, lng, radius, nivaa) {
+  if (!radius || nivaa < DEKNING.passert) return;
   const cs = cellStorrelse();
   const rM = radius / Math.cos((S.lat0 == null ? lat : S.lat0) * Math.PI / 180);
   const p = MERC.project(L.latLng(lat, lng));
   const x0 = Math.floor((p.x - rM) / cs), x1 = Math.floor((p.x + rM) / cs);
   const y0 = Math.floor((p.y - rM) / cs), y1 = Math.floor((p.y + rM) / cs);
-  const aar = new Date().getFullYear();
+  const t = aktivTur();
+  const aar = t ? t.sesong : new Date().getFullYear();
   for (let x = x0; x <= x1; x++) {
     for (let y = y0; y <= y1; y++) {
       const sx = (x + 0.5) * cs - p.x, sy = (y + 0.5) * cs - p.y;
       if (sx * sx + sy * sy > rM * rM) continue;
       const k = x + "," + y;
-      celler.set(k, aar);
-      if (benchAktiv) benchAktiv.celler.add(k);
+      settCelleNivaa(k, aar, nivaa);
+      if (benchAktiv && !benchAktiv.frosset && nivaa >= DEKNING.undersokt) benchAktiv.celler.add(k);
     }
   }
 }
@@ -648,13 +855,24 @@ const Taake = L.Layer.extend({
       ctx.fillStyle = "rgba(16,26,22,0.74)";
       ctx.fillRect(0, 0, st.x, st.y);
       ctx.globalCompositeOperation = "destination-out";
-      ctx.filter = "blur(5px)";
+      ctx.filter = "blur(4px)";
       ctx.fillStyle = "#000";
-      for (const [k, aar] of celler) {
-        if (filterAar !== null && aar !== filterAar) continue;
+      // Passert terreng lysnes bare delvis. Undersøkt/plukket terreng åpnes helt.
+      for (const [k] of celler) {
+        if (celleNivaa(k, filterAar) !== DEKNING.passert) continue;
         const r = rekt(k);
-        if (r) ctx.fillRect(r[0] - 1, r[1] - 1, r[2] + 2, r[3] + 2);
+        if (!r) continue;
+        ctx.globalAlpha = 0.42;
+        ctx.fillRect(r[0] - 1, r[1] - 1, r[2] + 2, r[3] + 2);
       }
+      for (const [k] of celler) {
+        if (celleNivaa(k, filterAar) < DEKNING.undersokt) continue;
+        const r = rekt(k);
+        if (!r) continue;
+        ctx.globalAlpha = 1;
+        ctx.fillRect(r[0] - 1, r[1] - 1, r[2] + 2, r[3] + 2);
+      }
+      ctx.globalAlpha = 1;
       ctx.filter = "none";
       ctx.globalCompositeOperation = "source-over";
     }
@@ -707,6 +925,8 @@ const fmt1 = v => v.toFixed(1).replace(".", ",");
 
 function startBench() {
   if (benchAktiv) return;
+  const t = aktivTur();
+  if (!t || t.status !== "aktiv") { melding("Start eller fortsett en tur først"); return; }
   visArk(`<h4>Ny måling — hvordan plukker du?</h4>
     <div class="valg">
       <button id="akHand">Hånd</button>
@@ -718,7 +938,9 @@ function startBench() {
 
 function benchIgang(metode) {
   lukkArk();
-  benchAktiv = { t0: Date.now(), metode, celler: new Set(), dist0: distanse };
+  const t = aktivTur();
+  if (!t || t.status !== "aktiv") { melding("Turen er ikke aktiv"); return; }
+  benchAktiv = { t0: Date.now(), metode, celler: new Set(), dist0: t.distanse, turId: t.id, frosset: false };
   document.getElementById("btnBench").classList.add("pa");
   document.getElementById("benchBar").classList.add("vis");
   benchTimer = setInterval(oppdaterBenchBar, 1000);
@@ -728,14 +950,26 @@ function benchIgang(metode) {
 
 function oppdaterBenchBar() {
   if (!benchAktiv) return;
-  const s = Math.floor((Date.now() - benchAktiv.t0) / 1000);
+  const slutt = benchAktiv.frosset ? benchAktiv.t1 : Date.now();
+  const s = Math.floor((slutt - benchAktiv.t0) / 1000);
   const mm = Math.floor(s / 60), ss = String(s % 60).padStart(2, "0");
-  const d = Math.round(distanse - benchAktiv.dist0);
+  const t = aktivTur();
+  const distNaa = benchAktiv.frosset ? benchAktiv.dist1 : (t ? t.distanse : distanse);
+  const d = Math.round(distNaa - benchAktiv.dist0);
   document.getElementById("benchTekst").textContent = `⏱ ${mm}:${ss} · ${d} m · ${benchAktiv.metode}`;
 }
 
 function ferdigBench() {
   if (!benchAktiv) return;
+  if (!benchAktiv.frosset) {
+    const t = aktivTur();
+    benchAktiv.t1 = Date.now();
+    benchAktiv.dist1 = t ? t.distanse : distanse;
+    benchAktiv.cellerFrosset = [...benchAktiv.celler];
+    benchAktiv.frosset = true;
+    clearInterval(benchTimer);
+    oppdaterBenchBar();
+  }
   visArk(`<h4>Hvor mye ble det?</h4>
     <input id="akLiter" type="text" inputmode="decimal" placeholder="liter, f.eks. 1,5">
     <div class="to">
@@ -748,7 +982,7 @@ function ferdigBench() {
   document.getElementById("akLagre").onclick = () => {
     const liter = parseFloat(String(inp.value).replace(",", "."));
     if (isNaN(liter) || liter < 0) { inp.style.borderColor = "var(--fare)"; return; }
-    const cellerArr = [...benchAktiv.celler];
+    const cellerArr = benchAktiv.cellerFrosset || [...benchAktiv.celler];
     let lat, lng;
     if (cellerArr.length) {
       let la = 0, ln = 0;
@@ -759,9 +993,9 @@ function ferdigBench() {
       lat = p.lat; lng = p.lng;
     }
     const b = {
-      id: Date.now().toString(36), t0: benchAktiv.t0, t1: Date.now(),
-      liter, metode: benchAktiv.metode,
-      dist: Math.max(0, Math.round(distanse - benchAktiv.dist0)),
+      id: Date.now().toString(36), t0: benchAktiv.t0, t1: benchAktiv.t1 || Date.now(),
+      liter, metode: benchAktiv.metode, turId: benchAktiv.turId || null,
+      dist: Math.max(0, Math.round((benchAktiv.dist1 ?? distanse) - benchAktiv.dist0)),
       celler: cellerArr, lat, lng
     };
     bench.push(b);
@@ -898,15 +1132,16 @@ function soneStat(s) {
   }
   const sv = MERC.project(L.latLng(laMin, lnMin));
   const no = MERC.project(L.latLng(laMax, lnMax));
-  let tot = 0, dekt = 0;
+  let tot = 0, dekt = 0, passert = 0;
   const filterAar = S.aar === "alle" ? null : +S.aar;
   for (let x = Math.floor(sv.x / cs); x <= Math.floor(no.x / cs); x++) {
     for (let y = Math.floor(sv.y / cs); y <= Math.floor(no.y / cs); y++) {
       const c = MERC.unproject(L.point((x + 0.5) * cs, (y + 0.5) * cs));
       if (!iPolygon(c.lat, c.lng, s.pkt)) continue;
       tot++;
-      const aar = celler.get(x + "," + y);
-      if (aar != null && (filterAar === null || aar === filterAar)) dekt++;
+      const nivaa = celleNivaa(x + "," + y, filterAar);
+      if (nivaa >= DEKNING.passert) passert++;
+      if (nivaa >= DEKNING.undersokt) dekt++;
     }
   }
   const iAar = new Date().getFullYear();
@@ -924,7 +1159,8 @@ function soneStat(s) {
     maal.push(rateLT(b));
   }
   return {
-    tot, dekt, pst: tot ? Math.round(dekt / tot * 100) : 0,
+    tot, dekt, passert, pst: tot ? Math.round(dekt / tot * 100) : 0,
+    passertPst: tot ? Math.round(passert / tot * 100) : 0,
     daa: tot * S.grid * S.grid / 1000,
     literIAar, literTot, maal: maal.sort((a, b) => a - b)
   };
@@ -941,9 +1177,11 @@ function narmesteUdekte(s) {
   const sv = MERC.project(L.latLng(laMin, lnMin));
   const no = MERC.project(L.latLng(laMax, lnMax));
   let best = null, bestD = Infinity;
+  const a = aktivTur();
+  const maalAar = a ? a.sesong : (S.aar === "alle" ? null : +S.aar);
   for (let x = Math.floor(sv.x / cs); x <= Math.floor(no.x / cs); x++) {
     for (let y = Math.floor(sv.y / cs); y <= Math.floor(no.y / cs); y++) {
-      if (celler.has(x + "," + y)) continue;
+      if (celleNivaa(x + "," + y, maalAar) >= DEKNING.undersokt) continue;
       const c = MERC.unproject(L.point((x + 0.5) * cs, (y + 0.5) * cs));
       if (!iPolygon(c.lat, c.lng, s.pkt)) continue;
       const d = map.distance(fra, c);
@@ -972,7 +1210,7 @@ function sonePopupHtml(s) {
     ? `${st.maal.length} ${st.maal.length === 1 ? "måling" : "målinger"}: ${fmt1(st.maal[0])}–${fmt1(st.maal[st.maal.length - 1])} l/t`
     : "Ingen målinger ennå";
   return `<div class="pop-tit" style="color:#A8C08A">${escHtml(s.navn)}</div>
-    <div class="pop-meta">${fmt1(st.daa)} daa · ${st.pst} % dekket<br>
+    <div class="pop-meta">${fmt1(st.daa)} daa · ${st.pst} % undersøkt · ${st.passertPst} % passert<br>
     I år: ${fmt1(st.literIAar)} l · Totalt: ${fmt1(st.literTot)} l<br>${maal}</div>
     <div class="pop-knapper">
       <button id="su-${s.id}">Nærmeste udekte</button>
@@ -1071,7 +1309,9 @@ function koblePopup(m) {
 function nyttMerke(type, punkt) {
   const p = punkt || posisjon || map.getCenter();
   if (type === "sekk") merker = merker.filter(x => x.type !== "sekk");
-  merker.push({ id: Date.now().toString(36), type, lat: p.lat, lng: p.lng, t: Date.now(), liter: null, notat: "" });
+  const t = aktivTur();
+  merker.push({ id: Date.now().toString(36), type, lat: p.lat, lng: p.lng, t: Date.now(), liter: null, notat: "", turId: t ? t.id : null });
+  if (navigator.vibrate) navigator.vibrate(22);
   lagreNa(); tegnMerker(); oppdaterHud(); fyllAar();
   melding((FARGER[type] || FARGER.funn).navn + (punkt || posisjon ? "" : " — satt på kartmidten"));
   if (type === "sekk" && !sekkHintVist) {
@@ -1080,6 +1320,235 @@ function nyttMerke(type, punkt) {
   }
 }
 let sekkHintVist = false;
+
+/* ============================================================
+   6b. Turer og aktivitetsklassifisering
+   ============================================================ */
+const SPOR_NAVN = {
+  ukjent: "Vurderer", stille: "Stille", plukk: "Plukker", gaa: "Går",
+  transport: "Transport", pause: "Pause"
+};
+const MANUELLE_MODUSER = ["auto", "plukk", "gaa", "transport"];
+let gpsVindu = [];
+let sporTilstand = "ukjent";
+let sporKandidat = null;
+let sporKandidatFra = 0;
+
+function nullstillAktivitetsfilter() {
+  gpsVindu = [];
+  sporTilstand = "ukjent";
+  sporKandidat = null;
+  sporKandidatFra = 0;
+  sisteFix = null;
+}
+
+function turVarighet(t, naa = Date.now()) {
+  const slutt = t.t1 || naa;
+  const pauselengde = Math.max(0, +t.pauseMs || 0) +
+    (!t.t1 && t.pauseStart ? Math.max(0, naa - t.pauseStart) : 0);
+  return Math.max(0, slutt - t.t0 - pauselengde);
+}
+function fmtVarighet(ms) {
+  const min = Math.floor(ms / 60000);
+  if (min < 60) return `${min} min`;
+  const t = Math.floor(min / 60), m = min % 60;
+  return `${t} t ${String(m).padStart(2, "0")} m`;
+}
+
+function startTur() {
+  if (aktivTur()) return;
+  const naa = Date.now();
+  const t = {
+    id: "tur-" + naa.toString(36), t0: naa, t1: null, status: "aktiv",
+    distanse: 0, spor: [], sesong: new Date(naa).getFullYear(),
+    pauseMs: 0, pauseStart: null
+  };
+  turer.push(t);
+  S.sporModus = "auto";
+  S.aar = String(t.sesong);
+  aktivTurId = t.id;
+  visTurId = t.id;
+  spor = t.spor;
+  distanse = 0;
+  retur = false;
+  sporLinje.setStyle({ color: "#7B8CC4", weight: 2.5 });
+  sporLinje.setLatLngs([]);
+  nullstillAktivitetsfilter();
+  fyllAar();
+  document.getElementById("setYear").value = String(t.sesong);
+  tegnMerker(); taake.tegn();
+  oppdaterTurUI(); oppdaterHud(); fyllLister(); lagreNa();
+  melding("Tur startet — Auto vurderer om du går eller plukker", 3200);
+}
+
+function pauseEllerFortsettTur() {
+  const t = aktivTur();
+  if (!t) { startTur(); return; }
+  if (benchAktiv) { melding("Avslutt målingen før du pauser turen"); return; }
+  if (t.status === "aktiv") {
+    t.status = "pauset";
+    t.pauseStart = Date.now();
+    nullstillAktivitetsfilter();
+    melding("Tur pauset — posisjonen vises, men ingenting registreres");
+  } else {
+    const naa = Date.now();
+    if (t.pauseStart) t.pauseMs = Math.max(0, +t.pauseMs || 0) + Math.max(0, naa - t.pauseStart);
+    t.pauseStart = null;
+    t.status = "aktiv";
+    settVistTur(t.id, false);
+    nullstillAktivitetsfilter();
+    melding("Turen fortsetter");
+  }
+  oppdaterTurUI(); lagreNa();
+}
+
+function avsluttTur() {
+  const t = aktivTur();
+  if (!t) return;
+  if (benchAktiv) { melding("Avslutt målingen først"); return; }
+  if (!confirm(`Avslutte turen?\n\n${fmtVarighet(turVarighet(t))} · ${fmt1(t.distanse / 1000)} km`)) return;
+  const naa = Date.now();
+  if (t.pauseStart) t.pauseMs = Math.max(0, +t.pauseMs || 0) + Math.max(0, naa - t.pauseStart);
+  t.pauseStart = null;
+  t.t1 = naa;
+  t.status = "avsluttet";
+  aktivTurId = null;
+  visTurId = t.id;
+  spor = t.spor;
+  distanse = t.distanse;
+  nullstillAktivitetsfilter();
+  retur = false;
+  sporLinje.setStyle({ color: "#7B8CC4", weight: 2.5 });
+  oppdaterTurUI(); oppdaterHud(); fyllLister(); lagreNa();
+  melding("Tur avsluttet");
+}
+
+function registrerGpsVindu(lat, lng, t, acc) {
+  const p = { lat, lng, t, acc: Math.max(0, +acc || 0) };
+  const forrige = gpsVindu[gpsVindu.length - 1];
+  if (!forrige || t - forrige.t >= 1500) gpsVindu.push(p);
+  else gpsVindu[gpsVindu.length - 1] = p;
+  const grense = t - 45000;
+  while (gpsVindu.length && gpsVindu[0].t < grense) gpsVindu.shift();
+}
+
+function aktivitetsMetrikk() {
+  if (gpsVindu.length < 3) return null;
+  const sisteT = gpsVindu[gpsVindu.length - 1].t;
+  const p = gpsVindu.filter(x => x.t >= sisteT - 32000);
+  if (p.length < 3 || p[p.length - 1].t - p[0].t < 8000) return null;
+  let vei = 0, rawVei = 0;
+  for (let i = 1; i < p.length; i++) {
+    const d = map.distance([p[i - 1].lat, p[i - 1].lng], [p[i].lat, p[i].lng]);
+    rawVei += d;
+    // En liten nøyaktighetsavhengig støybunn hindrer at GPS-drift ser ut som plukking/gange.
+    const stoy = Math.min(3.5, Math.max(0.8, (p[i - 1].acc + p[i].acc) * 0.04));
+    vei += Math.max(0, d - stoy);
+  }
+  const sek = (p[p.length - 1].t - p[0].t) / 1000;
+  const netto = map.distance([p[0].lat, p[0].lng], [p[p.length - 1].lat, p[p.length - 1].lng]);
+  const fart = vei / Math.max(1, sek);
+  const nettoFart = netto / Math.max(1, sek);
+  const effektivitet = vei > 2 ? Math.min(1, netto / vei) : 0;
+  return { fart, nettoFart, effektivitet, netto, rawVei, sek };
+}
+
+function klassifiserAktivitet() {
+  const t = aktivTur();
+  if (!t || t.status !== "aktiv") return "pause";
+  if (benchAktiv && !benchAktiv.frosset) return "plukk";
+  if (S.sporModus !== "auto") return S.sporModus;
+  const m = aktivitetsMetrikk();
+  if (!m) return "ukjent";
+  if (m.fart > 2.35 || m.nettoFart > 2.0) return "transport";
+  if ((m.nettoFart > 0.58 && m.effektivitet > 0.46) || (m.fart > 1.0 && m.effektivitet > 0.34)) return "gaa";
+  if (m.fart < 0.16 && m.netto < 4.0) return "stille";
+  return "plukk";
+}
+
+function oppdaterSporTilstand(ny) {
+  if (S.sporModus !== "auto" || (benchAktiv && !benchAktiv.frosset)) {
+    sporTilstand = ny;
+    sporKandidat = null;
+    oppdaterTurUI();
+    return;
+  }
+  if (ny === "pause" || ny === "ukjent") {
+    sporTilstand = ny;
+    sporKandidat = null;
+    oppdaterTurUI();
+    return;
+  }
+  // Transport må oppdages straks, ellers kan bil/buss rekke å rydde tåke.
+  if (ny === "transport") {
+    sporTilstand = ny;
+    sporKandidat = null;
+    oppdaterTurUI();
+    return;
+  }
+  if (sporTilstand === "ukjent" || sporTilstand === "pause" || sporTilstand === "transport") {
+    if (sporKandidat !== ny) { sporKandidat = ny; sporKandidatFra = Date.now(); }
+    const krav = ny === "plukk" ? 8000 : 5000;
+    if (Date.now() - sporKandidatFra >= krav) { sporTilstand = ny; sporKandidat = null; }
+    oppdaterTurUI();
+    return;
+  }
+  if (ny === sporTilstand) { sporKandidat = null; oppdaterTurUI(); return; }
+  if (sporKandidat !== ny) { sporKandidat = ny; sporKandidatFra = Date.now(); }
+  const krav = ny === "plukk" ? 7000 : 5000;
+  if (Date.now() - sporKandidatFra >= krav) { sporTilstand = ny; sporKandidat = null; }
+  oppdaterTurUI();
+}
+
+function oppdaterTurUI() {
+  const t = aktivTur();
+  const btn = document.getElementById("btnTur");
+  const slutt = document.getElementById("btnTurSlutt");
+  const akt = document.getElementById("btnAktivitet");
+  btn.classList.remove("aktiv", "pauset");
+  if (!t) {
+    btn.textContent = "▶ Start tur";
+    slutt.style.display = "none";
+    akt.disabled = true;
+    akt.textContent = "Auto · —";
+    akt.dataset.tilstand = "ukjent";
+    return;
+  }
+  slutt.style.display = "";
+  akt.disabled = false;
+  if (t.status === "pauset") {
+    btn.classList.add("pauset");
+    btn.textContent = "▶ Fortsett";
+    akt.dataset.tilstand = "pause";
+  } else {
+    btn.classList.add("aktiv");
+    btn.textContent = "Ⅱ Pause tur";
+  }
+  const vis = t.status === "pauset" ? "pause" : sporTilstand;
+  akt.dataset.tilstand = vis;
+  akt.textContent = S.sporModus === "auto"
+    ? `Auto · ${SPOR_NAVN[vis] || "—"}`
+    : `Man · ${SPOR_NAVN[S.sporModus] || S.sporModus}`;
+}
+
+function byttSporModus() {
+  const i = Math.max(0, MANUELLE_MODUSER.indexOf(S.sporModus));
+  S.sporModus = MANUELLE_MODUSER[(i + 1) % MANUELLE_MODUSER.length];
+  if (S.sporModus === "auto") {
+    nullstillAktivitetsfilter();
+    melding("Aktivitet: Auto");
+  } else {
+    sporTilstand = S.sporModus;
+    sisteFix = null;
+    melding(`Aktivitet låst til ${SPOR_NAVN[S.sporModus]}`);
+  }
+  oppdaterTurUI(); lagreNa();
+}
+
+document.getElementById("btnTur").addEventListener("click", pauseEllerFortsettTur);
+document.getElementById("btnTurSlutt").addEventListener("click", avsluttTur);
+document.getElementById("btnAktivitet").addEventListener("click", byttSporModus);
+setInterval(oppdaterTurUI, 1000);
 
 /* ============================================================
    7. GPS
@@ -1112,13 +1581,15 @@ function feil(e) {
 
 function fix(pos) {
   gpsSvarte = true;
-  const naa = Date.now();
-  if (!nativ && sisteFixTid && naa - sisteFixTid > 90000) {
-    hull.push({ t: sisteFixTid, sek: Math.round((naa - sisteFixTid) / 1000) });
+  const veggNaa = Date.now();
+  const naa = +pos.timestamp || veggNaa;
+  if (!nativ && sisteFixTid && veggNaa - sisteFixTid > 90000) {
+    hull.push({ t: sisteFixTid, sek: Math.round((veggNaa - sisteFixTid) / 1000) });
     if (hull.length > 80) hull.shift();
   }
-  sisteFixTid = naa;
+  sisteFixTid = veggNaa;
   const { latitude: lat, longitude: lng, accuracy: acc } = pos.coords;
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
   posisjon = L.latLng(lat, lng);
   posisjon.acc = acc;
   if (S.lat0 == null) S.lat0 = lat;
@@ -1135,20 +1606,71 @@ function fix(pos) {
   }
   if (acc > S.acc) return;
 
+  // Å gå opp en sonegrense er et eget verktøy og fungerer selv om en tur er pauset.
   if (soneModus && soneModus.modus === "gaa") soneLeggTil(lat, lng);
 
-  if (sisteFix) {
-    const d = map.distance(sisteFix, [lat, lng]);
-    if (d < 2) return;
-    if (d < 200) distanse += d;
+  const t = aktivTur();
+  if (!t || t.status !== "aktiv") {
+    oppdaterSporTilstand("pause");
+    if (!stille()) oppdaterHud();
+    return;
   }
-  sisteFix = L.latLng(lat, lng);
-  spor.push([lat, lng, naa]);
-  merkBesokt(lat, lng, S.radius);
+
+  // En aktiv tur er alltid turen som vises mens det registreres nye data.
+  if (visTurId !== t.id) settVistTur(t.id, false);
+  registrerGpsVindu(lat, lng, naa, acc);
+  oppdaterSporTilstand(klassifiserAktivitet());
+  const modus = (benchAktiv && !benchAktiv.frosset) ? "plukk" : (S.sporModus === "auto" ? sporTilstand : S.sporModus);
+
+  // Transport, pause, uklar aktivitet og ren stillstand rydder ikke tåke eller distanse.
+  if (!["gaa", "plukk"].includes(modus)) {
+    sisteFix = null;
+    if (stille()) oppdaterSpar(); else oppdaterHud();
+    lagre();
+    return;
+  }
+
+  const naaP = L.latLng(lat, lng);
+  naaP.t = naa; naaP.acc = acc;
+  let leggTilPunkt = !sisteFix;
+  let sporbrudd = false;
+  if (!sisteFix && t.spor.length) {
+    // Vi kommer tilbake fra pause/transport/stillstand. Ikke trekk en rett linje
+    // over et område appen bevisst lot være å registrere.
+    sporbrudd = true;
+  }
+  if (sisteFix) {
+    const d = map.distance(sisteFix, naaP);
+    const dt = Math.max(1, (naa - (sisteFix.t || naa - 5000)) / 1000);
+    const fart = d / dt;
+    // Punkt-for-punkt-filter i tillegg til vindusklassifiseringen. GPS-hopp skal ikke bli turdistanse.
+    const maksHopp = Math.max(18, dt * 3.4 + Math.min(18, (acc + (sisteFix.acc || acc)) * 0.35));
+    if (d <= maksHopp && fart <= 4.2) {
+      if (d >= 2) {
+        t.distanse += d;
+        distanse = t.distanse;
+        leggTilPunkt = true;
+      }
+    } else {
+      // Start en ny lokal kjede fra dette punktet uten å telle eller tegne hoppet.
+      sporbrudd = true;
+      leggTilPunkt = true;
+    }
+  }
+  sisteFix = naaP;
+
+  if (leggTilPunkt) {
+    t.spor.push([lat, lng, naa, modus, acc, sporbrudd ? 1 : undefined]);
+    spor = t.spor;
+    if (!stille() && S.track) tegnSpor();
+  }
+
+  if (modus === "plukk") merkDekning(lat, lng, S.radius, DEKNING.undersokt);
+  else merkDekning(lat, lng, S.walkRadius, DEKNING.passert);
+
   if (stille()) {
     oppdaterSpar();
   } else {
-    if (S.track) sporLinje.addLatLng([lat, lng]);
     taake.tegn();
     oppdaterHud();
   }
@@ -1180,8 +1702,8 @@ function startNativ() {
   posSirkel.addTo(map); noySirkel.addTo(map);
   try {
     bgId = CAPX.nativeCallback("BackgroundGeolocation", "addWatcher", {
-      backgroundTitle: "Lyng sporer turen",
-      backgroundMessage: "Trykk for å åpne kartet",
+      backgroundTitle: "Lyng posisjon aktiv",
+      backgroundMessage: "Registrering styres med turknappen i appen",
       requestPermissions: true,
       stale: false,
       distanceFilter: 5
@@ -1237,21 +1759,31 @@ function oppdaterPil() {
 }
 
 function sporTilStart() {
-  if (!posisjon || spor.length < 2) return null;
+  const t = aktivTur();
+  if (!t || !posisjon || t.spor.length < 2) return null;
+  const punkter = t.spor;
   let ni = 0, nd = Infinity;
-  for (let i = 0; i < spor.length; i++) {
-    const d = map.distance(posisjon, [spor[i][0], spor[i][1]]);
+  for (let i = 0; i < punkter.length; i++) {
+    const d = map.distance(posisjon, [punkter[i][0], punkter[i][1]]);
     if (d < nd) { nd = d; ni = i; }
   }
+
+  // Følg bare bakover innen samme sammenhengende GPS-segment. Et eksplisitt
+  // sporbrudd skal aldri telles som om brukeren faktisk gikk den rette linjen.
+  let start = ni;
+  while (start > 0 && !punkter[start][5]) start--;
   let sum = nd;
-  for (let i = ni; i > 0; i--) sum += map.distance([spor[i][0], spor[i][1]], [spor[i - 1][0], spor[i - 1][1]]);
+  for (let i = ni; i > start; i--) {
+    sum += map.distance([punkter[i][0], punkter[i][1]], [punkter[i - 1][0], punkter[i - 1][1]]);
+  }
   const sekk = merker.find(m => m.type === "sekk");
-  if (sekk) sum += map.distance([spor[0][0], spor[0][1]], [sekk.lat, sekk.lng]);
+  if (sekk) sum += map.distance([punkter[start][0], punkter[start][1]], [sekk.lat, sekk.lng]);
   return sum;
 }
 
 document.getElementById("chipSekk").addEventListener("click", () => {
   if (!merker.find(m => m.type === "sekk")) return;
+  if (!aktivTur() || aktivTur().spor.length < 2) { melding("Start en tur for retur via ditt eget spor"); return; }
   retur = !retur;
   sporLinje.setStyle({ color: retur ? "#D9A441" : "#7B8CC4", weight: retur ? 5 : 2.5 });
   document.getElementById("etSekk").textContent = retur ? "via sporet" : "til sekken";
@@ -1270,8 +1802,8 @@ function dekningIView() {
   if (total <= 0) return 0;
   const filterAar = S.aar === "alle" ? null : +S.aar;
   let n = 0;
-  for (const [k, aar] of celler) {
-    if (filterAar !== null && aar !== filterAar) continue;
+  for (const [k] of celler) {
+    if (celleNivaa(k, filterAar) < DEKNING.undersokt) continue;
     const i = k.indexOf(",");
     const cx = +k.slice(0, i), cy = +k.slice(i + 1);
     if (cx >= xMin && cx <= xMax && cy >= yMin && cy <= yMax) n++;
@@ -1303,9 +1835,10 @@ function oppdaterHud() {
   oppdaterPil();
 
   const liter = merker.reduce((s, m) => s + (m.liter || 0), 0) + bench.reduce((s, b) => s + b.liter, 0);
-  const daa = fmt1(celler.size * S.grid * S.grid / 1000);
+  const filterAar = S.aar === "alle" ? null : +S.aar;
+  const daa = fmt1(antallDekningsceller(DEKNING.undersokt, filterAar) * S.grid * S.grid / 1000);
   document.getElementById("statTekst").textContent =
-    `${daa} daa dekket · ${merker.length} ${merker.length === 1 ? "merke" : "merker"} · ` +
+    `${daa} daa undersøkt · ${turer.length} ${turer.length === 1 ? "tur" : "turer"} · ${merker.length} ${merker.length === 1 ? "merke" : "merker"} · ` +
     `${soner.length} ${soner.length === 1 ? "sone" : "soner"} · ${bench.length} ${bench.length === 1 ? "måling" : "målinger"}` +
     (liter ? ` · ${fmt1(liter)} liter` : "");
 }
@@ -1433,7 +1966,7 @@ function gjenopprettKart() {
     document.getElementById("vGps").textContent = "± " + Math.round(posisjon.acc || 0) + " m";
     if (folg) map.setView(posisjon, Math.max(map.getZoom(), 16));
   }
-  if (S.track) sporLinje.setLatLngs(spor.map(p => [p[0], p[1]]));
+  if (S.track) tegnSpor();
   taake.tegn();
   oppdaterHud();
 }
@@ -1441,7 +1974,8 @@ function gjenopprettKart() {
 function oppdaterSpar() {
   if (!sparPa) return;
   const rader = ['<span class="kl">' + new Date().toLocaleTimeString("no-NO", { hour: "2-digit", minute: "2-digit" }) + "</span>"];
-  rader.push(`${fmt1(distanse / 1000)} km · ${fmt1(celler.size * S.grid * S.grid / 1000)} daa`);
+  const filterAar = S.aar === "alle" ? null : +S.aar;
+  rader.push(`${fmt1(distanse / 1000)} km · ${fmt1(antallDekningsceller(DEKNING.undersokt, filterAar) * S.grid * S.grid / 1000)} daa undersøkt`);
   if (benchAktiv) rader.push(`måling ${Math.floor((Date.now() - benchAktiv.t0) / 60000)} min`);
   const p = posisjon || map.getCenter();
   const ned = solnedgang(p.lat, p.lng, new Date());
@@ -1536,7 +2070,7 @@ async function settBakgrunn(pa) {
 }
 
 function hullTekst() {
-  if (nativ) return "Bakgrunnstjenesten holder sporingen i gang — skjermsparing og lydtriks trengs ikke.";
+  if (nativ) return "Bakgrunnstjenesten holder GPS-en tilgjengelig. Gålinje og tåke lagres bare mens en tur er aktiv.";
   if (S.bg !== 1 && !hull.length) return "Strømsparing gjør skjermen svart, men appen sporer videre. Bakgrunn er et forsøk — telefonen din bestemmer om det virker.";
   if (!hull.length) return "Ingen hull i sporingen registrert. Fungerer på denne telefonen.";
   const lengste = Math.max(...hull.map(h => h.sek));
@@ -1568,14 +2102,16 @@ function gpx() {
       `  <wpt lat="${b.lat}" lon="${b.lng}"><time>${new Date(b.t0).toISOString()}</time>` +
       `<name>Måling ${fmt1(rateLT(b))} l/t</name><desc>${b.liter} l, ${b.metode}, ${b.dist} m</desc></wpt>`))
     .join("\n");
-  const trk = spor.map(p => `      <trkpt lat="${p[0]}" lon="${p[1]}"><time>${new Date(p[2]).toISOString()}</time></trkpt>`).join("\n");
-  lastNed(`blaabaer-${new Date().toISOString().slice(0, 10)}.gpx`,
+  const trk = [...turer].sort((a, b) => (a.t0 || 0) - (b.t0 || 0)).filter(t => (t.spor || []).length).map(t => {
+    const navn = new Date(t.t0).toLocaleString("no-NO", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+    const pts = t.spor.map(p => `      <trkpt lat="${p[0]}" lon="${p[1]}"><time>${new Date(p[2]).toISOString()}</time></trkpt>`).join("\n");
+    return `  <trk><name>Lyng ${esc(navn)}</name><trkseg>\n${pts}\n  </trkseg></trk>`;
+  }).join("\n");
+  lastNed(`lyng-${new Date().toISOString().slice(0, 10)}.gpx`,
 `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="Lyng" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="Lyng 3.2" xmlns="http://www.topografix.com/GPX/1/1">
 ${wpt}
-  <trk><name>Blåbærtur</name><trkseg>
 ${trk}
-  </trkseg></trk>
 </gpx>`, "application/gpx+xml");
 }
 
@@ -1654,6 +2190,43 @@ function kobleValg(id, felt, etterpa) {
 }
 
 function fyllLister() {
+  const tl = document.getElementById("turListe");
+  const sortertTurer = [...turer].sort((a, b) => (b.t0 || 0) - (a.t0 || 0));
+  const kmTot = turer.reduce((sum, t) => sum + (+t.distanse || 0), 0) / 1000;
+  const msTot = turer.reduce((sum, t) => sum + turVarighet(t), 0);
+  document.getElementById("turOppsummering").textContent = turer.length
+    ? `${turer.length} ${turer.length === 1 ? "tur" : "turer"} · ${fmt1(kmTot)} km · ${fmtVarighet(msTot)}`
+    : "Ingen turer ennå. Start en tur fra kartet før du begynner å gå/plukke.";
+  tl.innerHTML = turer.length ? "" : '<div class="tom">Ingen turer lagret.</div>';
+  for (const t of sortertTurer.slice(0, 30)) {
+    const d = new Date(t.t0);
+    const status = t.id === aktivTurId ? (t.status === "pauset" ? "Pauset" : "Pågår") : "Avsluttet";
+    const el = document.createElement("div");
+    el.className = "el";
+    el.innerHTML = `<div class="info"><b>${status} · ${d.toLocaleDateString("no-NO", { day: "2-digit", month: "short" })}</b>
+      <small>${d.toLocaleTimeString("no-NO", { hour: "2-digit", minute: "2-digit" })} · ${fmtVarighet(turVarighet(t))} · ${fmt1((t.distanse || 0) / 1000)} km · ${(t.spor || []).length} GPS-pkt</small></div>
+      <button>Vis</button><button class="fare">Slett</button>`;
+    const [vis, slett] = el.querySelectorAll("button");
+    vis.onclick = () => {
+      const a = aktivTur();
+      if (a && a.id !== t.id) { melding("Avslutt aktiv tur før du viser en eldre tur"); return; }
+      settVistTur(t.id, false);
+      document.getElementById("panel").classList.remove("apen");
+      if ((t.spor || []).length) map.fitBounds(L.latLngBounds(t.spor.map(p => [p[0], p[1]])).pad(0.15), { maxZoom: 17 });
+    };
+    slett.onclick = () => {
+      if (t.id === aktivTurId) { melding("Avslutt turen før du sletter den"); return; }
+      if (!confirm("Slette denne turen og gålinjen? Undersøkt terreng, merker, soner og målinger beholdes.")) return;
+      turer = turer.filter(x => x.id !== t.id);
+      if (visTurId === t.id) {
+        const ny = sisteTur();
+        settVistTur(ny ? ny.id : null, false);
+      }
+      lagreNa(); fyllLister(); oppdaterHud();
+    };
+    tl.appendChild(el);
+  }
+
   const sl = document.getElementById("soneListe");
   sl.innerHTML = soner.length ? "" : '<div class="tom">Ingen soner ennå — trykk ⬡ på kartet.</div>';
   for (const s of soner) {
@@ -1661,7 +2234,7 @@ function fyllLister() {
     const el = document.createElement("div");
     el.className = "el";
     el.innerHTML = `<div class="info"><b>${escHtml(s.navn)}</b>
-      <small>${fmt1(st.daa)} daa · ${st.pst} % dekket · i år ${fmt1(st.literIAar)} l</small></div>
+      <small>${fmt1(st.daa)} daa · ${st.pst} % undersøkt · ${st.passertPst} % passert · i år ${fmt1(st.literIAar)} l</small></div>
       <button>Vis</button>`;
     el.querySelector("button").onclick = () => {
       document.getElementById("panel").classList.remove("apen");
@@ -1704,34 +2277,102 @@ async function importer(tekst) {
   let d;
   try { d = JSON.parse(tekst); } catch (e) { melding("Klarte ikke lese fila"); return; }
   if (!d || typeof d !== "object") { melding("Klarte ikke lese fila"); return; }
+
   const nyMerker = (d.merker || []).filter(m => m && m.lat != null && m.lng != null);
   const nySoner = (d.soner || []).filter(x => x && Array.isArray(x.pkt) && x.pkt.length > 2);
   const nyBench = (d.bench || []).filter(x => x && x.t0 && typeof x.liter === "number");
-  const cellerInn = d.celler || {};
-  let antCeller = 0;
-  for (const aar in cellerInn) antCeller += (cellerInn[aar] || []).length;
-  if (!nyMerker.length && !nySoner.length && !nyBench.length && !antCeller) { melding("Fant ingen data i fila"); return; }
-  if (!confirm(`Importere ${nyMerker.length} merker, ${nySoner.length} soner, ${nyBench.length} målinger og ${antCeller} ruter?\n\nDet du har fra før beholdes.`)) return;
+  let nyTurer = (d.turer || []).map(normaliserTur).filter(Boolean);
+  if (!nyTurer.length && Array.isArray(d.spor) && d.spor.length) {
+    const t0 = +(d.spor[0][2] || Date.now());
+    nyTurer = [{
+      id: "import-" + t0.toString(36), t0,
+      t1: +(d.spor[d.spor.length - 1][2] || t0), status: "avsluttet",
+      distanse: Math.max(0, +d.distanse || 0), spor: d.spor,
+      sesong: new Date(t0).getFullYear()
+    }];
+  }
+
+  const cellePoster = [];
+  const ci = d.celler || {};
+  if (+ci.version === 2 && ci.years) {
+    for (const [aar, y] of Object.entries(ci.years)) {
+      for (const k of (y && y.passert) || []) cellePoster.push([k, +aar, DEKNING.passert]);
+      for (const k of (y && y.undersokt) || []) cellePoster.push([k, +aar, DEKNING.undersokt]);
+    }
+  } else {
+    for (const [aar, arr] of Object.entries(ci)) if (Array.isArray(arr))
+      for (const k of arr) cellePoster.push([k, +aar, DEKNING.undersokt]);
+  }
+
+  if (!nyMerker.length && !nySoner.length && !nyBench.length && !nyTurer.length && !cellePoster.length) {
+    melding("Fant ingen data i fila"); return;
+  }
+
+  const kildeGridRaw = d.meta && d.meta.grid != null ? d.meta.grid : (d.S ? d.S.grid : null);
+  const kildeLat0Raw = d.meta && d.meta.lat0 != null ? d.meta.lat0 : (d.S ? d.S.lat0 : null);
+  const kildeGrid = kildeGridRaw == null ? NaN : +kildeGridRaw;
+  const kildeLat0 = kildeLat0Raw == null ? NaN : +kildeLat0Raw;
+  let importerCeller = cellePoster.length > 0;
+  let adopterGeometri = false;
+  if (importerCeller && (!Number.isFinite(kildeGrid) || !Number.isFinite(kildeLat0))) {
+    importerCeller = false;
+  } else if (importerCeller && celler.size === 0) {
+    adopterGeometri = true;
+  } else if (importerCeller && celler.size > 0) {
+    const gridUlik = Number.isFinite(kildeGrid) && Math.abs(kildeGrid - S.grid) > 1e-9;
+    const latUlik = Number.isFinite(kildeLat0) && S.lat0 != null && Math.abs(kildeLat0 - S.lat0) > 1e-7;
+    if (gridUlik || latUlik) importerCeller = false;
+  }
+
+  const celleInfo = cellePoster.length
+    ? (importerCeller ? `${cellePoster.length} dekningsruter` : `${cellePoster.length} dekningsruter HOPPES OVER (annet rutenett)`)
+    : "ingen dekningsruter";
+  if (!confirm(`Importere ${nyTurer.length} turer, ${nyMerker.length} merker, ${nySoner.length} soner, ${nyBench.length} målinger og ${celleInfo}?\n\nDet du har fra før beholdes.`)) return;
+
+  if (adopterGeometri) {
+    S.grid = kildeGrid;
+    if (Number.isFinite(kildeLat0)) S.lat0 = kildeLat0;
+  }
 
   const mId = new Set(merker.map(x => x.id));
-  for (const m of nyMerker) { if (m.type === "bil") m.type = "sekk"; if (!mId.has(m.id)) merker.push(m); }
+  for (const m of nyMerker) {
+    if (m.type === "bil") m.type = "sekk";
+    if (!mId.has(m.id)) { merker.push(m); mId.add(m.id); }
+  }
   const sekker = merker.filter(m => m.type === "sekk").sort((a, b) => (b.t || 0) - (a.t || 0));
   if (sekker.length > 1) merker = merker.filter(m => m.type !== "sekk" || m === sekker[0]);
+
   const sId = new Set(soner.map(x => x.id));
-  for (const x of nySoner) if (!sId.has(x.id)) soner.push(x);
+  for (const x of nySoner) if (!sId.has(x.id)) { soner.push(x); sId.add(x.id); }
+
   const bId = new Set(bench.map(x => x.id));
-  for (const x of nyBench) if (!bId.has(x.id)) bench.push(x);
-  for (const aar in cellerInn)
-    for (const k of cellerInn[aar]) { const g = celler.get(k); if (g == null || g < +aar) celler.set(k, +aar); }
-  if (S.lat0 == null && d.S && d.S.lat0 != null) S.lat0 = d.S.lat0;
-  if (typeof d.distanse === "number" && d.distanse > distanse) distanse = d.distanse;
-  if (Array.isArray(d.spor) && d.spor.length > spor.length) {
-    spor = d.spor;
-    if (S.track) sporLinje.setLatLngs(spor.map(x => [x[0], x[1]]));
+  for (const x0 of nyBench) {
+    if (bId.has(x0.id)) continue;
+    const x = { ...x0 };
+    if (!importerCeller && Array.isArray(x.celler)) x.celler = [];
+    bench.push(x); bId.add(x.id);
+  }
+
+  const tId = new Set(turer.map(x => x.id));
+  for (const x0 of nyTurer) {
+    if (tId.has(x0.id)) continue;
+    const x = { ...x0 };
+    // En import skal aldri starte bakgrunnssporing ved et uhell.
+    if (!x.t1) x.t1 = (x.spor && x.spor.length ? +x.spor[x.spor.length - 1][2] : Date.now());
+    x.status = "avsluttet";
+    turer.push(x); tId.add(x.id);
+  }
+
+  if (importerCeller) for (const [k, aar, nivaa] of cellePoster) settCelleNivaa(k, aar, nivaa);
+
+  if (!aktivTur() && !vistTur()) {
+    const t = sisteTur();
+    if (t) settVistTur(t.id, false);
   }
   await lagreNa();
-  fyllAar(); tegnMerker(); tegnSoner(); taake.tegn(); oppdaterHud(); fyllLister();
-  melding("Importert", 3000);
+  document.getElementById("setGrid").value = String(S.grid);
+  fyllAar(); tegnMerker(); tegnSoner(); taake.tegn(); oppdaterHud(); fyllLister(); oppdaterTurUI();
+  melding(importerCeller || !cellePoster.length ? "Importert" : "Importert uten inkompatibel tåke", 3500);
 }
 
 document.getElementById("btnImport").addEventListener("click", () => {
@@ -1752,25 +2393,30 @@ document.getElementById("btnGpx").addEventListener("click", gpx);
 document.getElementById("btnBackup").addEventListener("click", () =>
   lastNed(`lyng-backup-${new Date().toISOString().slice(0, 10)}.json`, pakk(), "application/json"));
 document.getElementById("btnNullstillSpor").addEventListener("click", () => {
-  if (!confirm("Slette gålinjen? Tåke, merker, soner og målinger beholdes.")) return;
-  spor = []; distanse = 0; sisteFix = null;
-  sporLinje.setLatLngs([]); lagreNa(); oppdaterHud();
+  const t = vistTur();
+  if (!t) { melding("Ingen gålinje å slette"); return; }
+  if (!confirm("Slette gålinjen og distansen for turen som vises? Undersøkt terreng, merker, soner og målinger beholdes.")) return;
+  t.spor = []; t.distanse = 0;
+  if (t.id === aktivTurId) nullstillAktivitetsfilter();
+  settVistTur(t.id, false);
+  sporLinje.setLatLngs([]); lagreNa(); oppdaterHud(); fyllLister();
 });
 document.getElementById("btnNullstillAlt").addEventListener("click", async () => {
-  if (!confirm("Slette ALT — tåke, merker, soner, målinger og gålinje? Kan ikke angres.")) return;
-  celler.clear(); merker = []; soner = []; bench = []; spor = []; distanse = 0; sisteFix = null; hull = [];
+  if (!confirm("Slette ALT — tåke, turer, merker, soner og målinger? Kan ikke angres.")) return;
+  celler.clear(); merker = []; soner = []; bench = []; turer = []; aktivTurId = null; visTurId = null;
+  spor = []; distanse = 0; sisteFix = null; hull = []; gpsVindu = []; sporTilstand = "ukjent";
   sporLinje.setLatLngs([]);
   await lagreNa();
-  tegnMerker(); tegnSoner(); taake.tegn(); oppdaterHud(); fyllAar(); fyllLister();
+  tegnMerker(); tegnSoner(); taake.tegn(); oppdaterHud(); fyllAar(); fyllLister(); oppdaterTurUI();
   melding("Alt slettet");
 });
 
 function fyllAar() {
   const sel = document.getElementById("setYear");
-  const aar = new Set();
-  for (const [, a] of celler) aar.add(a);
+  const aar = celleAarstall();
   for (const m of merker) aar.add(new Date(m.t).getFullYear());
   for (const b of bench) aar.add(new Date(b.t0).getFullYear());
+  for (const t of turer) aar.add(+t.sesong || new Date(t.t0).getFullYear());
   const val = S.aar;
   sel.innerHTML = '<option value="alle">Alle år</option>' +
     [...aar].sort((a, b) => b - a).map(a => `<option value="${a}">${a}</option>`).join("");
@@ -1781,11 +2427,24 @@ function fyllAar() {
 (async function oppstart() {
   await lastInn();
   kartlag.setUrl((LAG[S.lag] || LAG.topo).url);
-  kobleValg("setGrid", "grid", () => {
-    if (celler.size && !confirm("Ny rutestørrelse passer ikke med tåken du har fra før. Slette den gamle tåken?")) return;
-    celler.clear(); lagreNa(); taake.tegn(); oppdaterHud();
+  if (!MANUELLE_MODUSER.includes(S.sporModus)) S.sporModus = "auto";
+  const gridEl = document.getElementById("setGrid");
+  gridEl.value = String(S.grid);
+  gridEl.addEventListener("change", () => {
+    const gammel = S.grid, ny = +gridEl.value;
+    if (ny === gammel) return;
+    const harGridData = celler.size > 0 || bench.some(b => Array.isArray(b.celler) && b.celler.length);
+    if (harGridData && !confirm("Ny rutestørrelse kan ikke bruke gamle dekningsruter. Slette tåken og målingenes kartflater? Selve målingene beholdes.")) {
+      gridEl.value = String(gammel);
+      return;
+    }
+    S.grid = ny;
+    celler.clear();
+    for (const b of bench) b.celler = [];
+    lagreNa(); taake.tegn(); oppdaterHud(); fyllLister();
   });
   kobleValg("setRadius", "radius");
+  kobleValg("setWalkRadius", "walkRadius");
   kobleValg("setAcc", "acc");
   kobleValg("setWake", "wake", () => settWake(S.wake === 1));
   kobleValg("setSpar", "spar");
@@ -1794,7 +2453,7 @@ function fyllAar() {
   kobleValg("setFog", "fog", () => settTaake(S.fog === 1));
   kobleValg("setRate", "rate", () => taake.tegn());
   kobleValg("setSoner", "soner", () => tegnSoner());
-  kobleValg("setTrack", "track", () => sporLinje.setLatLngs(S.track ? spor.map(p => [p[0], p[1]]) : []));
+  kobleValg("setTrack", "track", () => tegnSpor());
   kobleValg("setYear", "aar", () => { taake.tegn(); tegnMerker(); tegnSoner(); oppdaterHud(); });
 
   if (nativ) {
@@ -1803,18 +2462,20 @@ function fyllAar() {
     document.getElementById("radBg").style.display = "none";
     const st = document.getElementById("nativStatus");
     st.style.display = "";
-    st.textContent = "Kjører som app. Sporingen går videre med låst skjerm i lomma — varselet i statuslinja viser at den er i gang."
+    st.textContent = "Kjører som app. GPS-en kan være tilgjengelig med låst skjerm; gålinje og tåke registreres bare når en tur er startet og ikke er pauset."
       + (celler.size === 0 ? " Tomt kart? Hent JSON-kopien fra nettversjonen med Importer nederst." : "");
   }
 
   fyllAar();
   tegnMerker();
   tegnSoner();
-  if (S.track) sporLinje.setLatLngs(spor.map(p => [p[0], p[1]]));
+  if (S.track) tegnSpor();
   if (spor.length) map.setView([spor[spor.length - 1][0], spor[spor.length - 1][1]], 15);
   document.getElementById("btnTaake").classList.toggle("pa", S.fog === 1);
   visLagringStatus();
+  oppdaterTurUI();
   oppdaterHud();
+  fyllLister();
   taake.tegn();
   sjekkSol();
   start();
