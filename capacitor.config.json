@@ -1,1 +1,8 @@
-
+{
+  "appId": "no.lyng.baer",
+  "appName": "Lyng",
+  "webDir": "www",
+  "android": {
+    "useLegacyBridge": true
+  }
+}
