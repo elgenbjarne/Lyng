@@ -37,7 +37,7 @@
 
   /* ---------- toppfelt ---------- */
   .topp {
-    position: absolute; top: 0; left: 0; right: 0; z-index: 500;
+    position: absolute; top: 0; left: 0; right: 0; z-index: 600;
     padding: calc(8px + env(safe-area-inset-top)) 8px 10px;
     background: linear-gradient(180deg, rgba(16,26,22,.93) 55%, rgba(16,26,22,0));
     pointer-events: none;
@@ -94,7 +94,11 @@
   #btnTur { flex: 1.25; text-align: left; }
   #btnTur.aktiv { background: rgba(58,74,128,.96); border-color: var(--lyng); }
   #btnTur.pauset { border-color: var(--sol); color: var(--sol); }
-  #btnTurSlutt { flex: 0 0 auto; color: var(--fare); display: none; }
+  #btnTurSlutt {
+    flex: 0 0 auto; color: #ffd9d1; display: none;
+    background: rgba(196,97,75,.2); border-color: rgba(196,97,75,.68);
+  }
+  #btnTurSlutt.vis { display: block; }
   #btnAktivitet { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #btnAktivitet[data-tilstand="plukk"] { border-color: var(--mose); color: var(--mose); }
   #btnAktivitet[data-tilstand="gaa"] { border-color: var(--lyng); color: var(--lyng); }
@@ -110,7 +114,7 @@
     display: flex; gap: 6px;
   }
   .rail button {
-    flex: 1; height: var(--rail); border-radius: 14px; border: 1px solid rgba(237,240,234,.12);
+    flex: 1; min-width: 0; height: var(--rail); border-radius: 14px; border: 1px solid rgba(237,240,234,.12);
     background: var(--skygge-2); color: var(--papir);
     font-family: var(--kond); font-weight: 700; font-size: 11.5px;
     letter-spacing: .05em; text-transform: uppercase;
@@ -138,6 +142,7 @@
     position: absolute; left: 0; right: 0; bottom: 0; z-index: 1100;
     background: var(--skygge-2); border-top: 1px solid rgba(237,240,234,.14);
     border-radius: 18px 18px 0 0; padding: 16px 16px calc(22px + env(safe-area-inset-bottom)); display: none;
+    max-height: 82vh; overflow-y: auto;
   }
   .ark.apen { display: block; }
   .ark h4 { margin: 0 0 12px; font-family: var(--kond); font-weight: 700; font-size: 15px; text-transform: uppercase; letter-spacing: .06em; }
@@ -163,6 +168,18 @@
   }
   .ark .to button.primar { background: var(--lyng-dyp); border-color: var(--lyng); }
   .ark .to button.fare { color: var(--fare); }
+  .ark .ark-hjelp { color: var(--stein); font-size: 12.5px; line-height: 1.45; margin: -4px 0 12px; }
+  .ark .valg button { min-height: 48px; }
+  .ark .valg button { flex-wrap: wrap; }
+  .ark .valg button small { display: block; flex-basis: 100%; color: var(--stein); font-size: 10px; line-height: 1.35; margin-top: 3px; text-transform: none; letter-spacing: 0; }
+  .ark .valg button.valgt { border-color: var(--lyng); background: rgba(58,74,128,.7); }
+  .ark .ark-avbryt {
+    position: sticky; bottom: 0; z-index: 1; margin-top: 9px; padding-top: 9px;
+    background: linear-gradient(0deg, var(--skygge-2) 72%, rgba(27,42,36,0));
+  }
+  .ark .ark-avbryt button { width: 100%; }
+  .ark .kartvalg { margin-top: 6px; }
+  .ark .kartvalg + h4 { margin-top: 18px; }
 
   /* ---------- panel ---------- */
   .panel {
@@ -243,6 +260,21 @@
   .puls { width: 16px; height: 16px; border-radius: 50%; background: var(--sol); border: 2px solid var(--papir); animation: puls 1.2s ease-out infinite; }
   @keyframes puls { 0% { box-shadow: 0 0 0 0 rgba(217,164,65,.7); } 100% { box-shadow: 0 0 0 22px rgba(217,164,65,0); } }
 
+  /* Posisjon med kompassretning. Barnenoden roteres; Leaflet beholder sin egen transform på ikonet. */
+  .posisjon-markor { width: 38px; height: 38px; position: relative; }
+  .posisjon-retning { position: absolute; inset: 0; transform-origin: 50% 50%; transition: transform .12s linear; }
+  .posisjon-kjegle {
+    position: absolute; left: 12px; top: -1px; width: 14px; height: 22px;
+    background: rgba(123,140,196,.62); clip-path: polygon(50% 0, 100% 100%, 50% 78%, 0 100%);
+    filter: drop-shadow(0 1px 1px rgba(16,26,22,.8));
+  }
+  .posisjon-markor.ukjent .posisjon-kjegle { display: none; }
+  .posisjon-prikk {
+    position: absolute; left: 10px; top: 10px; width: 18px; height: 18px;
+    border-radius: 50%; background: var(--lyng-dyp); border: 3px solid var(--papir);
+    box-shadow: 0 1px 4px rgba(16,26,22,.75);
+  }
+
   /* ---------- strømsparing ---------- */
   .spar {
     position: absolute; inset: 0; z-index: 2000; background: #000;
@@ -283,7 +315,7 @@
   <div class="turkontroll">
     <button id="btnTur" title="Start, pause eller fortsett tur">▶ Start tur</button>
     <button id="btnAktivitet" data-tilstand="ukjent" title="Trykk for å bytte Auto / Plukker / Går / Transport" disabled>Auto · —</button>
-    <button id="btnTurSlutt" title="Avslutt tur">Avslutt</button>
+    <button id="btnTurSlutt" title="Avslutt og lagre turen">■ Avslutt tur</button>
   </div>
   <div class="stripe" id="solStripe"><div class="tekst" id="solTekst"></div></div>
   <div class="stripe" id="benchBar">
@@ -312,6 +344,7 @@
 
 <div class="rail">
   <button data-type="funn"><span class="dot" style="background:#7B8CC4"></span>Bær</button>
+  <button data-type="sopp"><span class="dot" style="background:#D6A85F"></span>Sopp</button>
   <button data-type="senere"><span class="dot" style="background:#A8C08A"></span>Tilbake</button>
   <button data-type="tomt"><span class="dot" style="background:#8A9490"></span>Tomt</button>
   <button data-type="sekk"><span class="dot" style="background:#D9A441"></span>Sekk</button>
@@ -329,7 +362,7 @@
 </div>
 
 <div class="panel" id="panel">
-  <h2>Innstillinger<span class="ver">v3.2</span></h2>
+  <h2>Innstillinger<span class="ver">v3.3</span></h2>
   <p class="hjelp" id="lagringStatus"></p>
   <p class="hjelp" id="nativStatus" style="display:none"></p>
 
@@ -429,7 +462,7 @@ if (!window.L) document.write('<script src="https://cdnjs.cloudflare.com/ajax/li
    1. Tilstand og lagring
    ============================================================ */
 const NOKKEL = "lyng:data";
-const SKJEMA = 32;
+const SKJEMA = 33;
 const DEKNING = { passert: 1, undersokt: 2 };
 const FARGER = {
   funn:   { farge: "#7B8CC4", navn: "Bær her" },
@@ -440,16 +473,35 @@ const FARGER = {
   kratt:  { farge: "#7A6A4F", navn: "Kratt" },
   bratt:  { farge: "#C4614B", navn: "For bratt" }
 };
+const BAERARTER = {
+  blabaer:    { farge: "#667BC1", navn: "Blåbær" },
+  tyttebaer:  { farge: "#C4545C", navn: "Tyttebær" },
+  multe:      { farge: "#E6A84D", navn: "Multer" },
+  bringebaer: { farge: "#D75D76", navn: "Bringebær" },
+  bjornbaer:  { farge: "#574067", navn: "Bjørnebær" },
+  annet:      { farge: "#7B8CC4", navn: "Andre bær" }
+};
+const SOPPARTER = {
+  kantarell:      { farge: "#E5B84D", navn: "Kantarell" },
+  steinsopp:      { farge: "#8A674C", navn: "Steinsopp" },
+  matpiggsopp:    { farge: "#D7C8A2", navn: "Matpiggsopp" },
+  traktkantarell: { farge: "#B58A45", navn: "Traktkantarell" },
+  matriske:       { farge: "#C97845", navn: "Matriske" },
+  faresopp:       { farge: "#DDD4B5", navn: "Fåresopp" },
+  matblekksopp:   { farge: "#A5A09B", navn: "Matblekksopp" },
+  skrubb:         { farge: "#8D725C", navn: "Skrubb" },
+  annen:          { farge: "#A99072", navn: "Annen / usikker sopp" }
+};
 const standard = {
   grid: 12, radius: 15, walkRadius: 5, acc: 35, wake: 1, fog: 1, track: 1,
-  rate: 1, soner: 1, lag: "topo", lat0: null, aar: "alle",
+  rate: 1, soner: 1, lag: "topo", fotruter: 0, umerkedeFotruter: 0, lat0: null, aar: "alle",
   spar: 2, bg: 0, sporModus: "auto"
 };
 
 let S = Object.assign({}, standard);
 // "x,y" -> { "2026": 1|2, ... }. 1 = passert, 2 = undersøkt/plukket.
 let celler = new Map();
-let merker = [];             // {id,type,lat,lng,t,liter,notat,turId?}
+let merker = [];             // {id,type,kategori?,art?,lat,lng,t,liter,notat,turId?}
 let soner = [];              // {id,navn,pkt:[[lat,lng]...],t}
 let bench = [];              // {id,t0,t1,liter,metode,dist,celler:[],lat,lng,turId?}
 let turer = [];              // {id,t0,t1,status,distanse,spor:[[lat,lng,t,tilstand?,acc?]],sesong}
@@ -580,7 +632,7 @@ function settVistTur(id, flyttKart = true) {
 function pakk() {
   return JSON.stringify({
     schemaVersion: SKJEMA,
-    appVersion: "3.2",
+    appVersion: "3.3",
     meta: { grid: S.grid, lat0: S.lat0 },
     S, merker, soner, bench, hull,
     celler: pakkCeller(),
@@ -643,6 +695,29 @@ function normaliserTur(t) {
   };
 }
 
+function normaliserMerke(m) {
+  if (!m || m.lat == null || m.lng == null) return null;
+  const n = { ...m };
+  n.id = String(n.id || ("merke-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)));
+  n.lat = +n.lat; n.lng = +n.lng;
+  if (!Number.isFinite(n.lat) || !Number.isFinite(n.lng)) return null;
+  if (n.type === "bil") n.type = "sekk";
+  // Tidlige utviklingsbygg kunne bruke sopp som egen type. Ny modell beholder
+  // type=funn og skiller kategori/art, slik at eldre bærdata forblir kompatible.
+  if (n.type === "sopp") { n.type = "funn"; n.kategori = "sopp"; }
+  if (n.type === "funn") {
+    n.kategori = n.kategori === "sopp" ? "sopp" : "baer";
+    n.art = n.art == null ? null : String(n.art);
+  } else {
+    delete n.kategori;
+    delete n.art;
+  }
+  n.t = +n.t || Date.now();
+  n.liter = n.liter == null || !Number.isFinite(+n.liter) ? null : +n.liter;
+  n.notat = String(n.notat || "");
+  return n;
+}
+
 async function lastInn() {
   let raa = null;
   try { raa = await lesRaa(); } catch (e) { raa = null; }
@@ -650,8 +725,7 @@ async function lastInn() {
   try {
     const d = JSON.parse(raa);
     S = Object.assign({}, standard, d.S || {});
-    merker = d.merker || [];
-    for (const m of merker) if (m.type === "bil") m.type = "sekk";
+    merker = (d.merker || []).map(normaliserMerke).filter(Boolean);
     soner = d.soner || [];
     bench = d.bench || [];
     hull = d.hull || [];
@@ -766,31 +840,61 @@ function polySenter(pkt) {
    3. Kart og lag
    ============================================================ */
 const LAG = {
-  topo:       { navn: "Topografisk", url: "https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png" },
-  toporaster: { navn: "Turkart",     url: "https://cache.kartverket.no/v1/wmts/1.0.0/toporaster/default/webmercator/{z}/{y}/{x}.png" },
-  graa:       { navn: "Gråtone",     url: "https://cache.kartverket.no/v1/wmts/1.0.0/topograatone/default/webmercator/{z}/{y}/{x}.png" }
+  topo:       { navn: "Topografisk", url: "https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/{z}/{y}/{x}.png", maks: 18 },
+  toporaster: { navn: "Turkart",     url: "https://cache.kartverket.no/v1/wmts/1.0.0/toporaster/default/webmercator/{z}/{y}/{x}.png", maks: 18 },
+  graa:       { navn: "Gråtone",     url: "https://cache.kartverket.no/v1/wmts/1.0.0/topograatone/default/webmercator/{z}/{y}/{x}.png", maks: 18 }
 };
 
-const map = L.map("map", { center: [59.13, 10.22], zoom: 13, zoomControl: false, maxZoom: 18 });
+const map = L.map("map", {
+  center: [59.13, 10.22], zoom: 13, zoomControl: false,
+  maxZoom: 20, zoomSnap: 0.25, zoomDelta: 0.5, bounceAtZoomLimits: false
+});
 map.attributionControl.setPrefix("");
-const kartlag = L.tileLayer(LAG.topo.url, {
-  maxZoom: 18, maxNativeZoom: 18,
-  attribution: '&copy; <a href="https://kartverket.no/">Kartverket</a>'
-}).addTo(map);
+const KARTVERK_ATTR = '&copy; <a href="https://kartverket.no/">Kartverket</a>';
+function lagGrunnkart(id) {
+  const k = LAG[id] || LAG.topo;
+  return L.tileLayer(k.url, { maxZoom: 20, maxNativeZoom: k.maks, attribution: KARTVERK_ATTR });
+}
+let kartlag = lagGrunnkart("topo").addTo(map);
 
-function byttLag() {
-  const n = Object.keys(LAG);
-  S.lag = n[(n.indexOf(S.lag) + 1) % n.length];
-  kartlag.setUrl(LAG[S.lag].url);
-  melding(LAG[S.lag].navn);
-  lagre();
+map.createPane("turrutePane");
+map.getPane("turrutePane").style.zIndex = 350;
+map.getPane("turrutePane").style.pointerEvents = "none";
+const FOTRUTE_WMS = "https://wms.geonorge.no/skwms1/wms.friluftsruter2";
+const FILTER_MERKET = '<Filter xmlns="http://www.opengis.net/ogc"><PropertyIsEqualTo><PropertyName>merking_d</PropertyName><Literal>Merket</Literal></PropertyIsEqualTo></Filter>';
+const FILTER_UMERKET = '<Filter xmlns="http://www.opengis.net/ogc"><PropertyIsEqualTo><PropertyName>merking_d</PropertyName><Literal>Ikke merket</Literal></PropertyIsEqualTo></Filter>';
+const fotruteLag = L.tileLayer.wms(FOTRUTE_WMS, {
+  layers: "Fotrute", format: "image/png", transparent: true, version: "1.1.1",
+  FILTER: FILTER_MERKET, pane: "turrutePane", maxZoom: 20, opacity: 0.92,
+  attribution: KARTVERK_ATTR
+});
+const umerketFotruteLag = L.tileLayer.wms(FOTRUTE_WMS, {
+  layers: "Fotrute", format: "image/png", transparent: true, version: "1.1.1",
+  FILTER: FILTER_UMERKET, pane: "turrutePane", maxZoom: 20, opacity: 0.92,
+  attribution: KARTVERK_ATTR
+});
+
+function settGrunnkart(id, varsle = true) {
+  if (!LAG[id]) id = "topo";
+  S.lag = id;
+  if (kartlag) map.removeLayer(kartlag);
+  kartlag = lagGrunnkart(id).addTo(map);
+  kartlag.bringToBack();
+  if (varsle) melding(LAG[id].navn);
+}
+
+function oppdaterTemalag() {
+  if (S.fotruter) { if (!map.hasLayer(fotruteLag)) fotruteLag.addTo(map); }
+  else if (map.hasLayer(fotruteLag)) map.removeLayer(fotruteLag);
+  if (S.umerkedeFotruter) { if (!map.hasLayer(umerketFotruteLag)) umerketFotruteLag.addTo(map); }
+  else if (map.hasLayer(umerketFotruteLag)) map.removeLayer(umerketFotruteLag);
 }
 
 /* ---- tåke + plukkerate på samme canvas ---- */
 const Taake = L.Layer.extend({
   onAdd(m) {
     this._map = m;
-    this._c = L.DomUtil.create("canvas");
+    this._c = L.DomUtil.create("canvas", "leaflet-zoom-animated");
     this._c.style.position = "absolute";
     this._c.style.pointerEvents = "none";
     m.getPanes().overlayPane.appendChild(this._c);
@@ -799,6 +903,14 @@ const Taake = L.Layer.extend({
     m.on("zoomend", this._avsluttAnim, this);
     this._plasser();
   },
+  onRemove(m) {
+    if (this._venter) cancelAnimationFrame(this._venter);
+    m.off("move resize viewreset", this._kanskjePlasser, this);
+    m.off("zoomanim", this._animer, this);
+    m.off("zoomend", this._avsluttAnim, this);
+    this._c.remove();
+    this._map = null;
+  },
   _animer(e) {
     this._animerer = true;
     const skala = this._map.getZoomScale(e.zoom, this._zoom);
@@ -806,22 +918,40 @@ const Taake = L.Layer.extend({
     const senter = this._map.project(this._center, e.zoom);
     const hjorne = halv.multiplyBy(-skala).add(senter)
       .subtract(this._map._getNewPixelOrigin(e.center, e.zoom));
-    L.DomUtil.setTransform(this._c, hjorne, skala);
+    const buffer = L.point(this._padX || 0, this._padY || 0).multiplyBy(skala);
+    L.DomUtil.setTransform(this._c, hjorne.subtract(buffer), skala);
   },
-  _kanskjePlasser() { if (!this._animerer) this._plasser(); },
-  _avsluttAnim() { this._animerer = false; this._plasser(); },
+  _kanskjePlasser() {
+    if (this._animerer || this._venter) return;
+    this._venter = requestAnimationFrame(() => {
+      this._venter = null;
+      if (!this._animerer) this._plasser();
+    });
+  },
+  _avsluttAnim() {
+    this._animerer = false;
+    if (this._venter) { cancelAnimationFrame(this._venter); this._venter = null; }
+    this._plasser();
+  },
   _plasser() {
     if (!this._map) return;
     const st = this._map.getSize();
+    const padding = 0.25;
+    this._padX = Math.ceil(st.x * padding);
+    this._padY = Math.ceil(st.y * padding);
+    this._cssBredde = st.x + this._padX * 2;
+    this._cssHoyde = st.y + this._padY * 2;
     this._center = this._map.getCenter();
     this._zoom = this._map.getZoom();
-    L.DomUtil.setPosition(this._c, this._map.containerPointToLayerPoint([0, 0]));
+    L.DomUtil.setPosition(this._c, this._map.containerPointToLayerPoint([-this._padX, -this._padY]));
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    if (this._c.width !== Math.round(st.x * dpr)) {
-      this._c.width = Math.round(st.x * dpr);
-      this._c.height = Math.round(st.y * dpr);
-      this._c.style.width = st.x + "px";
-      this._c.style.height = st.y + "px";
+    const bredde = Math.round(this._cssBredde * dpr);
+    const hoyde = Math.round(this._cssHoyde * dpr);
+    if (this._c.width !== bredde || this._c.height !== hoyde) {
+      this._c.width = bredde;
+      this._c.height = hoyde;
+      this._c.style.width = this._cssBredde + "px";
+      this._c.style.height = this._cssHoyde + "px";
     }
     this.tegn();
   },
@@ -830,13 +960,13 @@ const Taake = L.Layer.extend({
     const ctx = this._c.getContext("2d");
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const st = this._map.getSize();
+    const st = L.point(this._cssBredde || this._map.getSize().x, this._cssHoyde || this._map.getSize().y);
     ctx.filter = "none";
     ctx.globalCompositeOperation = "source-over";
     ctx.clearRect(0, 0, st.x, st.y);
 
     const cs = cellStorrelse();
-    const b = this._map.getBounds().pad(0.12);
+    const b = this._map.getBounds().pad(0.35);
     const sv = MERC.project(b.getSouthWest());
     const no = MERC.project(b.getNorthEast());
     const xMin = Math.floor(sv.x / cs) - 1, xMax = Math.floor(no.x / cs) + 1;
@@ -846,8 +976,8 @@ const Taake = L.Layer.extend({
       const i = k.indexOf(",");
       const cx = +k.slice(0, i), cy = +k.slice(i + 1);
       if (cx < xMin || cx > xMax || cy < yMin || cy > yMax) return null;
-      const nv = this._map.latLngToContainerPoint(MERC.unproject(L.point(cx * cs, (cy + 1) * cs)));
-      const so = this._map.latLngToContainerPoint(MERC.unproject(L.point((cx + 1) * cs, cy * cs)));
+      const nv = this._map.latLngToContainerPoint(MERC.unproject(L.point(cx * cs, (cy + 1) * cs))).add([this._padX, this._padY]);
+      const so = this._map.latLngToContainerPoint(MERC.unproject(L.point((cx + 1) * cs, cy * cs))).add([this._padX, this._padY]);
       return [nv.x, nv.y, so.x - nv.x, so.y - nv.y];
     };
 
@@ -859,17 +989,11 @@ const Taake = L.Layer.extend({
       ctx.fillStyle = "#000";
       // Passert terreng lysnes bare delvis. Undersøkt/plukket terreng åpnes helt.
       for (const [k] of celler) {
-        if (celleNivaa(k, filterAar) !== DEKNING.passert) continue;
+        const nivaa = celleNivaa(k, filterAar);
+        if (nivaa < DEKNING.passert) continue;
         const r = rekt(k);
         if (!r) continue;
-        ctx.globalAlpha = 0.42;
-        ctx.fillRect(r[0] - 1, r[1] - 1, r[2] + 2, r[3] + 2);
-      }
-      for (const [k] of celler) {
-        if (celleNivaa(k, filterAar) < DEKNING.undersokt) continue;
-        const r = rekt(k);
-        if (!r) continue;
-        ctx.globalAlpha = 1;
+        ctx.globalAlpha = nivaa >= DEKNING.undersokt ? 1 : 0.42;
         ctx.fillRect(r[0] - 1, r[1] - 1, r[2] + 2, r[3] + 2);
       }
       ctx.globalAlpha = 1;
@@ -894,7 +1018,13 @@ const taake = new Taake();
 map.addLayer(taake);
 
 const sporLinje = L.polyline([], { color: "#7B8CC4", weight: 2.5, opacity: .85 }).addTo(map);
-const posSirkel = L.circleMarker([0, 0], { radius: 8, color: "#EDF0EA", weight: 3, fillColor: "#3A4A80", fillOpacity: 1 });
+const posSirkel = L.marker([0, 0], {
+  interactive: false,
+  icon: L.divIcon({
+    className: "", iconSize: [38, 38], iconAnchor: [19, 19],
+    html: '<div class="posisjon-markor ukjent"><div class="posisjon-retning"><div class="posisjon-kjegle"></div></div><div class="posisjon-prikk"></div></div>'
+  })
+});
 const noySirkel = L.circle([0, 0], { radius: 0, color: "#7B8CC4", weight: 1, fillOpacity: .07 });
 const merkeLag = L.layerGroup().addTo(map);
 const soneLag = L.layerGroup().addTo(map);
@@ -931,9 +1061,11 @@ function startBench() {
     <div class="valg">
       <button id="akHand">Hånd</button>
       <button id="akPlukker">Bærplukker</button>
-    </div>`);
+    </div>
+    <div class="to ark-avbryt"><button id="akAvbryt">Avbryt</button></div>`);
   document.getElementById("akHand").onclick = () => benchIgang("hånd");
   document.getElementById("akPlukker").onclick = () => benchIgang("bærplukker");
+  document.getElementById("akAvbryt").onclick = lukkArk;
 }
 
 function benchIgang(metode) {
@@ -945,6 +1077,7 @@ function benchIgang(metode) {
   document.getElementById("benchBar").classList.add("vis");
   benchTimer = setInterval(oppdaterBenchBar, 1000);
   oppdaterBenchBar();
+  oppdaterTurUI();
   melding("Måling i gang — plukk!");
 }
 
@@ -1010,6 +1143,7 @@ function avsluttBench() {
   clearInterval(benchTimer);
   document.getElementById("btnBench").classList.remove("pa");
   document.getElementById("benchBar").classList.remove("vis");
+  oppdaterTurUI();
 }
 
 document.getElementById("btnBench").addEventListener("click", () => benchAktiv ? ferdigBench() : startBench());
@@ -1027,9 +1161,11 @@ function startSone() {
     <div class="valg">
       <button id="akTegn">Trykk hjørner på kartet</button>
       <button id="akGaa">Gå grensa selv</button>
-    </div>`);
+    </div>
+    <div class="to ark-avbryt"><button id="akAvbryt">Avbryt</button></div>`);
   document.getElementById("akTegn").onclick = () => { lukkArk(); soneIgang("tegn"); };
   document.getElementById("akGaa").onclick = () => { lukkArk(); soneIgang("gaa"); };
+  document.getElementById("akAvbryt").onclick = lukkArk;
 }
 
 function soneIgang(modus) {
@@ -1147,7 +1283,7 @@ function soneStat(s) {
   const iAar = new Date().getFullYear();
   let literIAar = 0, literTot = 0;
   for (const m of merker) {
-    if (!m.liter || !iPolygon(m.lat, m.lng, s.pkt)) continue;
+    if (m.type !== "funn" || m.kategori === "sopp" || !m.liter || !iPolygon(m.lat, m.lng, s.pkt)) continue;
     literTot += m.liter;
     if (new Date(m.t).getFullYear() === iAar) literIAar += m.liter;
   }
@@ -1257,12 +1393,48 @@ function kobleSonePopup(s) {
    ============================================================ */
 function escHtml(s) { return String(s || "").replace(/[<>&"]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c])); }
 
+function merkeInfo(m) {
+  if (m && m.type === "funn") {
+    const register = m.kategori === "sopp" ? SOPPARTER : BAERARTER;
+    const reserve = m.kategori === "sopp"
+      ? { farge: "#A99072", navn: "Sopp – uspesifisert" }
+      : { farge: FARGER.funn.farge, navn: "Bær – uspesifisert" };
+    return register[m.art] || reserve;
+  }
+  return FARGER[(m || {}).type] || FARGER.funn;
+}
+
+function velgArt(kategori, punkt, eksisterende = null) {
+  const erSopp = kategori === "sopp";
+  const register = erSopp ? SOPPARTER : BAERARTER;
+  visArk(`<h4>${eksisterende ? "Endre" : "Sett"} ${erSopp ? "soppmerke" : "bærmerke"}</h4>
+    ${erSopp ? '<p class="ark-hjelp">Egen observasjon – ikke artsbestemmelse eller godkjenning som matsopp. Kontroller alltid sopp før bruk.</p>' : ""}
+    <div class="valg">
+      ${Object.entries(register).map(([id, f]) => `<button data-art="${id}" class="${eksisterende && eksisterende.art === id ? "valgt" : ""}"><span class="dot" style="background:${f.farge}"></span>${f.navn}</button>`).join("")}
+    </div>
+    <div class="to ark-avbryt"><button id="akAvbryt">Avbryt</button></div>`);
+  document.querySelectorAll("#ark [data-art]").forEach(b => {
+    b.onclick = () => {
+      if (eksisterende) {
+        eksisterende.type = "funn";
+        eksisterende.kategori = kategori;
+        eksisterende.art = b.dataset.art;
+        lukkArk(); lagreNa(); tegnMerker(); oppdaterHud();
+        melding(merkeInfo(eksisterende).navn);
+      } else {
+        lukkArk(); nyttMerke("funn", punkt, kategori, b.dataset.art);
+      }
+    };
+  });
+  document.getElementById("akAvbryt").onclick = lukkArk;
+}
+
 function tegnMerker() {
   merkeLag.clearLayers();
   const filterAar = S.aar === "alle" ? null : +S.aar;
   for (const m of merker) {
     if (filterAar !== null && new Date(m.t).getFullYear() !== filterAar) continue;
-    const f = FARGER[m.type] || FARGER.funn;
+    const f = merkeInfo(m);
     const mk = L.circleMarker([m.lat, m.lng], {
       radius: m.type === "sekk" ? 9 : 7, color: "#101A16", weight: 2,
       fillColor: f.farge, fillOpacity: 1
@@ -1273,18 +1445,21 @@ function tegnMerker() {
 }
 
 function popupHtml(m) {
-  const f = FARGER[m.type] || FARGER.funn;
+  const f = merkeInfo(m);
   const d = new Date(m.t);
   const dato = d.toLocaleDateString("no-NO", { day: "2-digit", month: "short", year: "numeric" });
   const kl = d.toLocaleTimeString("no-NO", { hour: "2-digit", minute: "2-digit" });
+  const kanLiter = m.type === "funn" && m.kategori !== "sopp";
+  const kanEndreArt = m.type === "funn";
   return `<div class="pop-tit" style="color:${f.farge}">${f.navn}</div>
-    <div class="pop-meta">${dato} kl ${kl}<br>${m.lat.toFixed(5)}, ${m.lng.toFixed(5)}</div>
+    <div class="pop-meta">${dato} kl ${kl}<br>${m.lat.toFixed(5)}, ${m.lng.toFixed(5)}${m.kategori === "sopp" ? "<br>Egen observasjon – kontroller før bruk" : ""}</div>
     <div class="pop-felt">
-      <input class="liter" id="pl-${m.id}" type="text" inputmode="decimal" placeholder="ltr" value="${m.liter != null ? String(m.liter).replace(".", ",") : ""}">
+      ${kanLiter ? `<input class="liter" id="pl-${m.id}" type="text" inputmode="decimal" placeholder="ltr" value="${m.liter != null ? String(m.liter).replace(".", ",") : ""}">` : ""}
       <input id="pn-${m.id}" type="text" placeholder="Notat" value="${escHtml(m.notat)}">
     </div>
     <div class="pop-knapper">
       <button id="pd-${m.id}" class="slett">Slett</button>
+      ${kanEndreArt ? `<button id="pa-${m.id}">Endre art</button>` : ""}
       <button id="pk-${m.id}">Lagre</button>
     </div>`;
 }
@@ -1294,11 +1469,23 @@ function koblePopup(m) {
   const no = document.getElementById("pn-" + m.id);
   const kn = document.getElementById("pk-" + m.id);
   const sl = document.getElementById("pd-" + m.id);
-  if (kn) kn.onclick = () => {
-    m.liter = li && li.value.trim() !== "" ? parseFloat(li.value.replace(",", ".")) : null;
-    if (m.liter != null && isNaN(m.liter)) m.liter = null;
+  const ar = document.getElementById("pa-" + m.id);
+  const lagreFelt = () => {
+    if (li) {
+      m.liter = li.value.trim() !== "" ? parseFloat(li.value.replace(",", ".")) : null;
+      if (m.liter != null && isNaN(m.liter)) m.liter = null;
+    }
     m.notat = no ? no.value : "";
+  };
+  if (kn) kn.onclick = () => {
+    lagreFelt();
     lagreNa(); map.closePopup(); oppdaterHud();
+  };
+  if (ar) ar.onclick = () => {
+    lagreFelt();
+    lagreNa();
+    map.closePopup();
+    velgArt(m.kategori === "sopp" ? "sopp" : "baer", L.latLng(m.lat, m.lng), m);
   };
   if (sl) sl.onclick = () => {
     merker = merker.filter(x => x.id !== m.id);
@@ -1306,14 +1493,18 @@ function koblePopup(m) {
   };
 }
 
-function nyttMerke(type, punkt) {
+function nyttMerke(type, punkt, kategori = null, art = null) {
   const p = punkt || posisjon || map.getCenter();
   if (type === "sekk") merker = merker.filter(x => x.type !== "sekk");
   const t = aktivTur();
-  merker.push({ id: Date.now().toString(36), type, lat: p.lat, lng: p.lng, t: Date.now(), liter: null, notat: "", turId: t ? t.id : null });
+  const m = normaliserMerke({
+    id: Date.now().toString(36), type, kategori, art,
+    lat: p.lat, lng: p.lng, t: Date.now(), liter: null, notat: "", turId: t ? t.id : null
+  });
+  merker.push(m);
   if (navigator.vibrate) navigator.vibrate(22);
   lagreNa(); tegnMerker(); oppdaterHud(); fyllAar();
-  melding((FARGER[type] || FARGER.funn).navn + (punkt || posisjon ? "" : " — satt på kartmidten"));
+  melding(merkeInfo(m).navn + (punkt || posisjon ? "" : " — satt på kartmidten"));
   if (type === "sekk" && !sekkHintVist) {
     sekkHintVist = true;
     setTimeout(() => melding("Tips: trykk på sekkechipen øverst for retur langs sporet", 3500), 2300);
@@ -1329,6 +1520,12 @@ const SPOR_NAVN = {
   transport: "Transport", pause: "Pause"
 };
 const MANUELLE_MODUSER = ["auto", "plukk", "gaa", "transport"];
+const SPOR_HJELP = {
+  auto: "Appen vurderer gange og plukking",
+  plukk: "Åpner undersøkt terreng fullt",
+  gaa: "Registrerer spor og lysner tåken",
+  transport: "Viser posisjon uten å registrere"
+};
 let gpsVindu = [];
 let sporTilstand = "ukjent";
 let sporKandidat = null;
@@ -1355,8 +1552,48 @@ function fmtVarighet(ms) {
   return `${t} t ${String(m).padStart(2, "0")} m`;
 }
 
-function startTur() {
+function visModusvalg(forStart = false) {
+  if (!forStart && !aktivTur()) return;
+  if (!forStart && benchAktiv) { melding("Fullfør eller avbryt målingen før du bytter aktivitet"); return; }
+  const aktiv = forStart ? "auto" : S.sporModus;
+  visArk(`<h4>${forStart ? "Start tur" : "Velg aktivitet"}</h4>
+    <p class="ark-hjelp">${forStart ? "Velg hvordan turen skal registreres. Du kan bytte når som helst underveis." : "Dette styrer hva som registreres fra neste GPS-punkt."}</p>
+    <div class="valg">
+      ${MANUELLE_MODUSER.map(m => `<button data-spor-modus="${m}" class="${m === aktiv ? "valgt" : ""}">${m === "auto" ? "Auto" : SPOR_NAVN[m]}<small>${SPOR_HJELP[m]}</small></button>`).join("")}
+    </div>
+    <div class="to ark-avbryt"><button id="akAvbryt">Avbryt</button></div>`);
+  document.querySelectorAll("#ark [data-spor-modus]").forEach(b => {
+    b.onclick = () => {
+      const modus = b.dataset.sporModus;
+      lukkArk();
+      aktiverKompass();
+      if (forStart) startTur(modus);
+      else settSporModus(modus);
+    };
+  });
+  document.getElementById("akAvbryt").onclick = lukkArk;
+}
+
+function settSporModus(modus, varsle = true) {
+  if (!MANUELLE_MODUSER.includes(modus)) modus = "auto";
+  S.sporModus = modus;
+  if (modus === "auto") {
+    nullstillAktivitetsfilter();
+    if (varsle) melding("Aktivitet: Auto");
+  } else {
+    sporTilstand = modus;
+    gpsVindu = [];
+    sporKandidat = null;
+    sisteFix = null;
+    if (varsle) melding(`Aktivitet: ${SPOR_NAVN[modus]}`);
+  }
+  oppdaterTurUI();
+  lagreNa();
+}
+
+function startTur(modus = "auto") {
   if (aktivTur()) return;
+  if (!MANUELLE_MODUSER.includes(modus)) modus = "auto";
   const naa = Date.now();
   const t = {
     id: "tur-" + naa.toString(36), t0: naa, t1: null, status: "aktiv",
@@ -1364,13 +1601,14 @@ function startTur() {
     pauseMs: 0, pauseStart: null
   };
   turer.push(t);
-  S.sporModus = "auto";
+  S.sporModus = modus;
   S.aar = String(t.sesong);
   aktivTurId = t.id;
   visTurId = t.id;
   spor = t.spor;
   distanse = 0;
   retur = false;
+  document.getElementById("etSekk").textContent = "til sekken";
   sporLinje.setStyle({ color: "#7B8CC4", weight: 2.5 });
   sporLinje.setLatLngs([]);
   nullstillAktivitetsfilter();
@@ -1378,12 +1616,13 @@ function startTur() {
   document.getElementById("setYear").value = String(t.sesong);
   tegnMerker(); taake.tegn();
   oppdaterTurUI(); oppdaterHud(); fyllLister(); lagreNa();
-  melding("Tur startet — Auto vurderer om du går eller plukker", 3200);
+  melding(modus === "auto" ? "Tur startet — Auto vurderer aktiviteten" : `Tur startet — ${SPOR_NAVN[modus]}`, 3200);
 }
 
 function pauseEllerFortsettTur() {
   const t = aktivTur();
-  if (!t) { startTur(); return; }
+  if (!t) { visModusvalg(true); return; }
+  aktiverKompass();
   if (benchAktiv) { melding("Avslutt målingen før du pauser turen"); return; }
   if (t.status === "aktiv") {
     t.status = "pauset";
@@ -1418,6 +1657,7 @@ function avsluttTur() {
   distanse = t.distanse;
   nullstillAktivitetsfilter();
   retur = false;
+  document.getElementById("etSekk").textContent = "til sekken";
   sporLinje.setStyle({ color: "#7B8CC4", weight: 2.5 });
   oppdaterTurUI(); oppdaterHud(); fyllLister(); lagreNa();
   melding("Tur avsluttet");
@@ -1508,14 +1748,14 @@ function oppdaterTurUI() {
   btn.classList.remove("aktiv", "pauset");
   if (!t) {
     btn.textContent = "▶ Start tur";
-    slutt.style.display = "none";
+    slutt.classList.remove("vis");
     akt.disabled = true;
     akt.textContent = "Auto · —";
     akt.dataset.tilstand = "ukjent";
     return;
   }
-  slutt.style.display = "";
-  akt.disabled = false;
+  slutt.classList.add("vis");
+  akt.disabled = !!benchAktiv;
   if (t.status === "pauset") {
     btn.classList.add("pauset");
     btn.textContent = "▶ Fortsett";
@@ -1531,19 +1771,7 @@ function oppdaterTurUI() {
     : `Man · ${SPOR_NAVN[S.sporModus] || S.sporModus}`;
 }
 
-function byttSporModus() {
-  const i = Math.max(0, MANUELLE_MODUSER.indexOf(S.sporModus));
-  S.sporModus = MANUELLE_MODUSER[(i + 1) % MANUELLE_MODUSER.length];
-  if (S.sporModus === "auto") {
-    nullstillAktivitetsfilter();
-    melding("Aktivitet: Auto");
-  } else {
-    sporTilstand = S.sporModus;
-    sisteFix = null;
-    melding(`Aktivitet låst til ${SPOR_NAVN[S.sporModus]}`);
-  }
-  oppdaterTurUI(); lagreNa();
-}
+function byttSporModus() { visModusvalg(false); }
 
 document.getElementById("btnTur").addEventListener("click", pauseEllerFortsettTur);
 document.getElementById("btnTurSlutt").addEventListener("click", avsluttTur);
@@ -1588,8 +1816,11 @@ function fix(pos) {
     if (hull.length > 80) hull.shift();
   }
   sisteFixTid = veggNaa;
-  const { latitude: lat, longitude: lng, accuracy: acc } = pos.coords;
+  const { latitude: lat, longitude: lng, accuracy: acc, heading: kurs, speed: fart } = pos.coords;
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+  if (Number.isFinite(kurs) && kurs >= 0 && (!Number.isFinite(fart) || fart >= 0.4) && Date.now() - headingTid > 3000) {
+    settHeading(kurs, 0.45);
+  }
   posisjon = L.latLng(lat, lng);
   posisjon.acc = acc;
   if (S.lat0 == null) S.lat0 = lat;
@@ -1600,6 +1831,7 @@ function fix(pos) {
     document.getElementById("chipGps").classList.toggle("svak", acc > S.acc);
     document.getElementById("vGps").textContent = "± " + Math.round(acc) + " m";
     posSirkel.setLatLng([lat, lng]);
+    oppdaterPosisjonRetning();
     noySirkel.setLatLng([lat, lng]).setRadius(acc);
     if (folg) map.setView([lat, lng], Math.max(map.getZoom(), 16), { animate: true });
     oppdaterKoord();
@@ -1715,7 +1947,13 @@ function startNativ() {
         return;
       }
       if (!loc || loc.latitude == null) return;
-      fix({ coords: { latitude: loc.latitude, longitude: loc.longitude, accuracy: loc.accuracy } });
+      fix({
+        timestamp: loc.time || Date.now(),
+        coords: {
+          latitude: loc.latitude, longitude: loc.longitude, accuracy: loc.accuracy,
+          heading: loc.bearing, speed: loc.speed
+        }
+      });
     });
   } catch (err) {
     ingenGps("Fikk ikke startet bakgrunnssporingen.");
@@ -1733,16 +1971,72 @@ function peiling(a, b) {
     Math.cos(t1) * Math.sin(t2) - Math.sin(t1) * Math.cos(t2) * Math.cos(dl)) * 180 / Math.PI + 360) % 360;
 }
 
-let heading = null, harAbsolutt = false, retur = false;
-function onOri(e, abs) {
-  if (e.alpha == null) return;
-  if (abs) harAbsolutt = true;
-  else if (harAbsolutt || e.absolute !== true) return;
-  heading = (360 - e.alpha) % 360;
+let heading = null, headingVis = null, headingTid = 0, headingTimer = null;
+let harAbsolutt = false, kompassSpurt = false, retur = false;
+function headingErFersk() { return heading != null && Date.now() - headingTid < 15000; }
+function settHeading(ny, faktor = 0.28) {
+  if (!Number.isFinite(ny)) return;
+  ny = (ny % 360 + 360) % 360;
+  if (heading == null) {
+    heading = ny;
+    if (headingVis == null) headingVis = ny;
+    else headingVis += (ny - (headingVis % 360) + 540) % 360 - 180;
+  }
+  else {
+    const delta = (ny - heading + 540) % 360 - 180;
+    heading = (heading + delta * faktor + 360) % 360;
+    headingVis += delta * faktor;
+  }
+  headingTid = Date.now();
+  clearTimeout(headingTimer);
+  headingTimer = setTimeout(() => {
+    heading = null;
+    headingTid = 0;
+    oppdaterPil();
+    oppdaterPosisjonRetning();
+  }, 15100);
   oppdaterPil();
+  oppdaterPosisjonRetning();
+}
+
+function onOri(e, abs) {
+  const iosRetning = Number.isFinite(e.webkitCompassHeading) ? e.webkitCompassHeading : null;
+  if (iosRetning == null && !Number.isFinite(e.alpha)) return;
+  if (abs) harAbsolutt = true;
+  else if (iosRetning == null && (harAbsolutt || e.absolute !== true)) return;
+  const skjermVinkel = (screen.orientation && Number.isFinite(screen.orientation.angle))
+    ? screen.orientation.angle
+    : (Number.isFinite(window.orientation) ? window.orientation : 0);
+  settHeading(iosRetning == null ? (360 - e.alpha + skjermVinkel) % 360 : iosRetning);
 }
 window.addEventListener("deviceorientationabsolute", e => onOri(e, true), true);
 window.addEventListener("deviceorientation", e => onOri(e, false), true);
+
+async function aktiverKompass() {
+  if (kompassSpurt) return;
+  kompassSpurt = true;
+  try {
+    if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") {
+      const svar = await DeviceOrientationEvent.requestPermission();
+      if (svar !== "granted") melding("Kompassretning er ikke tillatt");
+    }
+  } catch (e) { /* Android og eldre nettlesere trenger ingen forespørsel */ }
+}
+
+let posPilVenter = false;
+function oppdaterPosisjonRetning() {
+  if (posPilVenter) return;
+  posPilVenter = true;
+  requestAnimationFrame(() => {
+    posPilVenter = false;
+    const rot = posSirkel.getElement() && posSirkel.getElement().querySelector(".posisjon-retning");
+    const markor = posSirkel.getElement() && posSirkel.getElement().querySelector(".posisjon-markor");
+    if (!rot || !markor) return;
+    const kjent = headingErFersk();
+    markor.classList.toggle("ukjent", !kjent);
+    if (kjent) rot.style.transform = `rotate(${headingVis}deg)`;
+  });
+}
 
 let pilVenter = false;
 function oppdaterPil() {
@@ -1752,7 +2046,7 @@ function oppdaterPil() {
     pilVenter = false;
     const pil = document.getElementById("sekkPil");
     const sekk = merker.find(m => m.type === "sekk");
-    if (heading == null || !sekk || !posisjon) { pil.style.display = "none"; return; }
+    if (!headingErFersk() || !sekk || !posisjon) { pil.style.display = "none"; return; }
     pil.style.display = "inline-block";
     pil.style.transform = `rotate(${(peiling(posisjon, sekk) - heading + 360) % 360}deg)`;
   });
@@ -1833,8 +2127,10 @@ function oppdaterHud() {
     chip.style.display = "";
   } else chip.style.display = "none";
   oppdaterPil();
+  oppdaterPosisjonRetning();
 
-  const liter = merker.reduce((s, m) => s + (m.liter || 0), 0) + bench.reduce((s, b) => s + b.liter, 0);
+  const liter = merker.reduce((s, m) => s + (m.type === "funn" && m.kategori !== "sopp" ? (m.liter || 0) : 0), 0)
+    + bench.reduce((s, b) => s + b.liter, 0);
   const filterAar = S.aar === "alle" ? null : +S.aar;
   const daa = fmt1(antallDekningsceller(DEKNING.undersokt, filterAar) * S.grid * S.grid / 1000);
   document.getElementById("statTekst").textContent =
@@ -1962,6 +2258,7 @@ function skjulSpar() {
 function gjenopprettKart() {
   if (posisjon) {
     posSirkel.setLatLng(posisjon);
+    oppdaterPosisjonRetning();
     noySirkel.setLatLng(posisjon).setRadius(posisjon.acc || 0);
     document.getElementById("vGps").textContent = "± " + Math.round(posisjon.acc || 0) + " m";
     if (folg) map.setView(posisjon, Math.max(map.getZoom(), 16));
@@ -2096,7 +2393,7 @@ function gpx() {
   const esc = s => String(s || "").replace(/[<>&]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
   const wpt = merker.map(m =>
     `  <wpt lat="${m.lat}" lon="${m.lng}"><time>${new Date(m.t).toISOString()}</time>` +
-    `<name>${esc((FARGER[m.type] || FARGER.funn).navn)}${m.liter ? " " + m.liter + " l" : ""}</name>` +
+    `<name>${esc(merkeInfo(m).navn)}${m.type === "funn" && m.kategori !== "sopp" && m.liter ? " " + m.liter + " l" : ""}</name>` +
     `<desc>${esc(m.notat)}</desc></wpt>`)
     .concat(bench.map(b =>
       `  <wpt lat="${b.lat}" lon="${b.lng}"><time>${new Date(b.t0).toISOString()}</time>` +
@@ -2109,7 +2406,7 @@ function gpx() {
   }).join("\n");
   lastNed(`lyng-${new Date().toISOString().slice(0, 10)}.gpx`,
 `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="Lyng 3.2" xmlns="http://www.topografix.com/GPX/1/1">
+<gpx version="1.1" creator="Lyng 3.3" xmlns="http://www.topografix.com/GPX/1/1">
 ${wpt}
 ${trk}
 </gpx>`, "application/gpx+xml");
@@ -2129,14 +2426,20 @@ function melding(t, ms) {
 function visArk(html) {
   const a = document.getElementById("ark");
   a.innerHTML = html;
+  a.scrollTop = 0;
   a.classList.add("apen");
 }
 function lukkArk() { document.getElementById("ark").classList.remove("apen"); }
 
 document.querySelectorAll(".rail button").forEach(b =>
-  b.addEventListener("click", () => nyttMerke(b.dataset.type)));
+  b.addEventListener("click", () => {
+    if (b.dataset.type === "funn") velgArt("baer");
+    else if (b.dataset.type === "sopp") velgArt("sopp");
+    else nyttMerke(b.dataset.type);
+  }));
 
 document.getElementById("btnFolg").addEventListener("click", e => {
+  aktiverKompass();
   folg = !folg;
   e.currentTarget.classList.toggle("pa", folg);
   if (folg && posisjon) map.setView(posisjon, Math.max(map.getZoom(), 16));
@@ -2161,15 +2464,51 @@ map.on("click", e => {
 });
 map.on("contextmenu", e => {
   if (soneModus) return;
-  const typer = ["funn", "senere", "tomt", "myr", "kratt", "bratt"];
+  const typer = [
+    { type: "funn", navn: "Bær", farge: FARGER.funn.farge },
+    { type: "sopp", navn: "Sopp", farge: "#D6A85F" },
+    ...["senere", "tomt", "myr", "kratt", "bratt"].map(type => ({ type, ...FARGER[type] }))
+  ];
   visArk(`<h4>Sett merke her</h4><div class="valg">` +
-    typer.map(t => `<button data-ark-type="${t}"><span class="dot" style="background:${FARGER[t].farge}"></span>${FARGER[t].navn}</button>`).join("") +
-    `</div>`);
-  document.querySelectorAll("#ark [data-ark-type]").forEach(b =>
-    b.onclick = () => { lukkArk(); nyttMerke(b.dataset.arkType, e.latlng); });
+    typer.map(t => `<button data-ark-type="${t.type}"><span class="dot" style="background:${t.farge}"></span>${t.navn}</button>`).join("") +
+    `</div><div class="to ark-avbryt"><button id="akAvbryt">Avbryt</button></div>`);
+  document.querySelectorAll("#ark [data-ark-type]").forEach(b => {
+    b.onclick = () => {
+      const type = b.dataset.arkType;
+      if (type === "funn") velgArt("baer", e.latlng);
+      else if (type === "sopp") velgArt("sopp", e.latlng);
+      else { lukkArk(); nyttMerke(type, e.latlng); }
+    };
+  });
+  document.getElementById("akAvbryt").onclick = lukkArk;
 });
 
-document.getElementById("btnLag").addEventListener("click", byttLag);
+function visKartvalg() {
+  visArk(`<h4>Velg kart og turlag</h4>
+    <p class="ark-hjelp">Turlagene kan vises over alle grunnkart. De ligger under tåken.</p>
+    <div class="valg kartvalg">
+      ${Object.entries(LAG).map(([id, k]) => `<button data-grunnkart="${id}" class="${S.lag === id ? "valgt" : ""}">${k.navn}</button>`).join("")}
+    </div>
+    <h4>Turlag</h4>
+    <div class="valg">
+      <button data-tema="fotruter" class="${S.fotruter ? "valgt" : ""}">Merkede fotruter<small>${S.fotruter ? "På" : "Av"}</small></button>
+      <button data-tema="umerkedeFotruter" class="${S.umerkedeFotruter ? "valgt" : ""}">Umerkede fotruter<small>${S.umerkedeFotruter ? "På" : "Av"}</small></button>
+    </div>
+    <div class="to ark-avbryt"><button id="akLukk">Lukk</button></div>`);
+  document.querySelectorAll("#ark [data-grunnkart]").forEach(b => {
+    b.onclick = () => { settGrunnkart(b.dataset.grunnkart); lagreNa(); visKartvalg(); };
+  });
+  document.querySelectorAll("#ark [data-tema]").forEach(b => {
+    b.onclick = () => {
+      const felt = b.dataset.tema;
+      S[felt] = S[felt] ? 0 : 1;
+      oppdaterTemalag(); lagreNa(); visKartvalg();
+    };
+  });
+  document.getElementById("akLukk").onclick = lukkArk;
+}
+
+document.getElementById("btnLag").addEventListener("click", visKartvalg);
 document.getElementById("btnMeny").addEventListener("click", () => {
   map.closePopup(); lukkArk();
   visLagringStatus(); oppdaterHud(); fyllLister();
@@ -2278,7 +2617,7 @@ async function importer(tekst) {
   try { d = JSON.parse(tekst); } catch (e) { melding("Klarte ikke lese fila"); return; }
   if (!d || typeof d !== "object") { melding("Klarte ikke lese fila"); return; }
 
-  const nyMerker = (d.merker || []).filter(m => m && m.lat != null && m.lng != null);
+  const nyMerker = (d.merker || []).map(normaliserMerke).filter(Boolean);
   const nySoner = (d.soner || []).filter(x => x && Array.isArray(x.pkt) && x.pkt.length > 2);
   const nyBench = (d.bench || []).filter(x => x && x.t0 && typeof x.liter === "number");
   let nyTurer = (d.turer || []).map(normaliserTur).filter(Boolean);
@@ -2336,7 +2675,6 @@ async function importer(tekst) {
 
   const mId = new Set(merker.map(x => x.id));
   for (const m of nyMerker) {
-    if (m.type === "bil") m.type = "sekk";
     if (!mId.has(m.id)) { merker.push(m); mId.add(m.id); }
   }
   const sekker = merker.filter(m => m.type === "sekk").sort((a, b) => (b.t || 0) - (a.t || 0));
@@ -2426,7 +2764,8 @@ function fyllAar() {
 /* ---- oppstart ---- */
 (async function oppstart() {
   await lastInn();
-  kartlag.setUrl((LAG[S.lag] || LAG.topo).url);
+  settGrunnkart(S.lag, false);
+  oppdaterTemalag();
   if (!MANUELLE_MODUSER.includes(S.sporModus)) S.sporModus = "auto";
   const gridEl = document.getElementById("setGrid");
   gridEl.value = String(S.grid);
