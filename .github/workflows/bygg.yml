@@ -1,1 +1,98 @@
+name: Bygg Lyng-appen
 
+on:
+  workflow_dispatch:          # lar deg starte bygget manuelt fra Actions-fanen
+  push:
+    paths:
+      - 'lyng.html'
+      - 'package.json'
+      - 'capacitor.config.json'
+      - 'verktoy/klargjor.mjs'
+      - '.github/workflows/bygg.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hent repoet
+        uses: actions/checkout@v4
+
+      - name: Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Godta Android-lisenser
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
+
+      # Uten fast nøkkel får hvert bygg ny signatur, og da nekter Android
+      # å installere oppdateringen over den forrige. Første bygg lager
+      # nøkkelen og legger den i repoet; senere bygg gjenbruker den.
+      - name: Fast signeringsnøkkel
+        run: |
+          if [ ! -f verktoy/debug.keystore ]; then
+            echo "Lager signeringsnøkkel for første gang"
+            mkdir -p verktoy
+            keytool -genkeypair -v \
+              -keystore verktoy/debug.keystore \
+              -storepass android -keypass android \
+              -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 20000 \
+              -dname "CN=Lyng, O=Lyng, C=NO"
+            git config user.name "github-actions"
+            git config user.email "actions@github.com"
+            git add -f verktoy/debug.keystore
+            git commit -m "Fast signeringsnokkel for appbygg"
+            git push
+          fi
+          mkdir -p ~/.android
+          cp verktoy/debug.keystore ~/.android/debug.keystore
+
+      - name: Legg web-appen i www/
+        run: |
+          mkdir -p www
+          cp lyng.html www/index.html
+
+      - name: Installer avhengigheter
+        run: npm install
+
+      - name: Lag Android-prosjektet
+        run: npx cap add android
+
+      - name: Tilpass Android-prosjektet
+        env:
+          BYGG: ${{ github.run_number }}
+        run: node verktoy/klargjor.mjs
+
+      - name: Synk
+        run: npx cap sync android
+
+      - name: Bygg APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Legg APK-en ut for nedlasting
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk lyng.apk
+          gh release delete siste --yes --cleanup-tag || true
+          gh release create siste lyng.apk \
+            --title "Lyng - siste bygg" \
+            --notes "Bygg ${{ github.run_number }}, laget $(date -u '+%d.%m.%Y %H:%M') UTC"
+
+      - name: Reserve - last ned som artefakt
+        uses: actions/upload-artifact@v4
+        with:
+          name: lyng-apk
+          path: lyng.apk
