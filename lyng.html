@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<title>Lyng — bær- og soppsporing</title>
+<title>Lyng — blåbærsporing</title>
 <link href="vendor/leaflet.css" rel="stylesheet" onerror="this.onerror=null;this.href='https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'" />
 <link href="vendor/figtree/index.css" rel="stylesheet" onerror="this.onerror=null;this.href='https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&display=swap'" />
 <link href="vendor/caprasimo/index.css" rel="stylesheet" onerror="this.onerror=null;this.href='https://fonts.googleapis.com/css2?family=Caprasimo&display=swap'" />
@@ -15,8 +15,8 @@
     --ink: #201E1D;
     --ink-svak: #645C50;
     --ink-hint: #82796A;
-    --strek: rgba(32,30,29,.16);
-    --strek-svak: rgba(32,30,29,.09);
+    --strek: rgba(32,30,29,.14);
+    --strek-svak: rgba(32,30,29,.08);
     --terra: #C67139;
     --terra-mork: #B2622D;
     --terra-dyp: #8C491A;
@@ -25,334 +25,321 @@
     --sage-dyp: #3D472B;
     --sage-lys: #E1EECC;
     --gra: #C0B6A5;
-    --rail: 104px;
     --disp: "Caprasimo", Georgia, serif;
     --tekst: "Figtree", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    --data: "Figtree", system-ui, sans-serif;
+    --sk: 0 4px 14px rgba(46,43,37,.20);
+    --sk-stor: 0 12px 34px rgba(46,43,37,.26);
+    --topp-y: calc(env(safe-area-inset-top) + 10px);
+    --meny-y: calc(env(safe-area-inset-top) + 56px);
+    --bunn-y: calc(env(safe-area-inset-bottom) + 16px);
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
     margin: 0; padding: 0; height: 100%; overflow: hidden;
-    font-family: var(--tekst);
+    font-family: var(--tekst); font-size: 14px;
     background: var(--papir); color: var(--ink);
     overscroll-behavior: none;
   }
-  button { font-family: var(--tekst); }
+  button { font-family: var(--tekst); color: inherit; }
   #map { position: absolute; inset: 0; background: #E8E2D4; }
-  /* Solmodus: maks kontrast i sterkt lys */
-  body.sol { --papir: #FFFFFF; --ark: #FFFFFF; --sand: #F0E7D6; --ink: #000000; --ink-svak: #3A352C; --strek: rgba(0,0,0,.34); }
+  body.sol { --papir: #FFFFFF; --ark: #FFFFFF; --sand: #F0E7D6; --ink: #000000; --ink-svak: #3A352C; --strek: rgba(0,0,0,.3); }
   body.sol #map { filter: contrast(1.16) brightness(1.05); }
 
   .leaflet-control-attribution {
-    background: rgba(249,244,237,.86) !important; color: var(--ink-hint) !important;
-    font-size: 9px; padding: 3px 8px; border-radius: 10px 0 0 0;
-    margin: 0 0 calc(var(--rail) + 108px) 0 !important;
+    background: rgba(249,244,237,.82) !important; color: var(--ink-hint) !important;
+    font-size: 8.5px; padding: 2px 7px; border-radius: 0 8px 0 0;
+    margin: 0 !important;
   }
   .leaflet-control-attribution a { color: var(--ink-svak) !important; }
 
-  /* ---------- toppfelt ---------- */
+  /* ---------- toppfelt: én rad, resten er kart ---------- */
   .topp {
     position: absolute; top: 0; left: 0; right: 0; z-index: 600;
-    padding: calc(10px + env(safe-area-inset-top)) 12px 10px;
-    pointer-events: none;
+    padding: var(--topp-y) 12px 0; pointer-events: none;
   }
-  .dekning { height: 4px; background: rgba(32,30,29,.12); border-radius: 999px; overflow: hidden; margin: 0 4px 9px; }
+  .topp > * { pointer-events: auto; }
+  .topprad { display: flex; align-items: center; gap: 7px; }
+  .fyll { flex: 1; pointer-events: none; }
+
+  .pille {
+    display: flex; align-items: center; gap: 7px; height: 40px; padding: 0 15px;
+    border: 1px solid var(--strek-svak); border-radius: 999px; cursor: pointer;
+    background: var(--papir); box-shadow: var(--sk); min-width: 0;
+  }
+  .pille b {
+    font-family: var(--disp); font-weight: 400; font-size: 16px; line-height: 1;
+    letter-spacing: -.01em; white-space: nowrap;
+  }
+  .pille .en { font-size: 10px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--ink-hint); margin-left: -3px; }
+  .pille .skille { width: 1px; height: 15px; background: var(--strek); flex: 0 0 auto; }
+  .pille .prikk { width: 9px; height: 9px; border-radius: 50%; background: var(--gra); flex: 0 0 auto; }
+  .pille .karet { width: 7px; height: 7px; flex: 0 0 auto; margin-left: 1px; border-right: 2px solid var(--ink-hint); border-bottom: 2px solid var(--ink-hint); transform: translateY(-2px) rotate(45deg); }
+  #statPille.apen .karet { transform: translateY(1px) rotate(225deg); }
+  #statPille.apen { background: var(--ink); border-color: var(--ink); color: var(--ark); }
+  #statPille.apen .karet { border-color: rgba(249,244,237,.7); }
+  #statPille.apen .en { color: rgba(249,244,237,.6); }
+  #statPille.apen .skille { background: rgba(249,244,237,.3); }
+
+  [data-tilstand="plukk"] .prikk { background: var(--sage); }
+  [data-tilstand="gaa"] .prikk { background: #AEBF92; }
+  [data-tilstand="transport"] .prikk { background: var(--terra); }
+  [data-tilstand="pause"] .prikk { background: var(--terra-lys); box-shadow: inset 0 0 0 2px var(--terra-dyp); }
+  [data-tilstand="stille"] .prikk { background: var(--sand); box-shadow: inset 0 0 0 2px var(--gra); }
+
+  .mini {
+    height: 32px; padding: 0 12px; border-radius: 999px; cursor: pointer; flex: 0 0 auto;
+    background: var(--ark); border: 1px solid var(--strek-svak); box-shadow: var(--sk);
+    display: flex; align-items: center;
+  }
+  .mini b { font-weight: 700; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .mini.svak { background: var(--terra-lys); border-color: var(--terra); }
+  .mini.svak b { color: var(--terra-dyp); }
+
+  .rund {
+    width: 40px; height: 40px; border-radius: 50%; flex: 0 0 auto; cursor: pointer;
+    border: 1px solid var(--strek-svak); background: var(--papir); box-shadow: var(--sk);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .rund.pa { background: var(--terra); border-color: var(--terra); color: var(--ark); }
+  .rund.apen { background: var(--ink); border-color: var(--ink); color: var(--ark); }
+  .rund:active { transform: scale(.94); }
+  .rund:focus-visible, .pille:focus-visible, .mini:focus-visible { outline: 2px solid var(--terra); outline-offset: 2px; }
+
+  .dekning { height: 3px; margin: 7px 8px 0; border-radius: 999px; background: rgba(32,30,29,.1); overflow: hidden; pointer-events: none; }
   .dekning i { display: block; height: 100%; width: 0; background: var(--terra); border-radius: 999px; transition: width .6s ease; }
 
-  .tallstripe {
-    display: flex; align-items: center; gap: 10px; pointer-events: auto;
-    background: var(--papir); border-radius: 999px; padding: 8px 10px 8px 20px;
-    box-shadow: 0 12px 32px rgba(46,43,37,.22);
-  }
-  .tall b {
-    display: block; font-family: var(--disp); font-weight: 400; font-size: 22px; line-height: 1;
-    color: var(--ink); white-space: nowrap;
-  }
-  .tall span.et {
-    display: block; font-size: 9.5px; font-weight: 600; letter-spacing: .12em;
-    text-transform: uppercase; color: var(--ink-hint); margin-top: 3px; white-space: nowrap;
-  }
-  .delelinje { width: 1px; height: 30px; background: var(--strek); flex: 0 0 auto; }
-  .tallstripe .fyll { flex: 1; }
-
-  #btnAktivitet {
-    display: flex; align-items: center; gap: 9px; min-height: 56px; padding: 0 20px;
-    border: none; border-radius: 999px; background: var(--gra); color: var(--ark);
-    font-weight: 600; font-size: 15px; cursor: pointer; white-space: nowrap;
-    max-width: 46%; overflow: hidden; text-overflow: ellipsis;
-  }
-  #btnAktivitet::before {
-    content: ""; width: 11px; height: 11px; border-radius: 50%; flex: 0 0 auto;
-    background: var(--ark); opacity: .85;
-  }
-  #btnAktivitet[data-tilstand="plukk"] { background: var(--sage); }
-  #btnAktivitet[data-tilstand="gaa"] { background: #AEBF92; color: var(--sage-dyp); }
-  #btnAktivitet[data-tilstand="gaa"]::before { background: var(--sage-dyp); }
-  #btnAktivitet[data-tilstand="transport"] { background: var(--terra); }
-  #btnAktivitet[data-tilstand="pause"] { background: var(--terra-lys); color: var(--terra-dyp); }
-  #btnAktivitet[data-tilstand="pause"]::before { background: var(--terra-dyp); }
-  #btnAktivitet:disabled { background: var(--sand); color: var(--ink-hint); cursor: default; }
-  #btnAktivitet:disabled::before { background: var(--gra); }
-
-  .underrad { display: flex; gap: 7px; margin-top: 8px; pointer-events: auto; align-items: stretch; }
-  .underrad .chip, .underrad button {
-    display: flex; flex-direction: column; justify-content: center; gap: 2px;
-    min-height: 48px; padding: 6px 14px; border-radius: 999px;
-    background: var(--ark); border: 1px solid var(--strek); color: var(--ink);
-    box-shadow: 0 1px 2px rgba(46,43,37,.14); min-width: 0; cursor: pointer;
-  }
-  .underrad b {
-    font-family: var(--data); font-weight: 700; font-size: 14.5px; line-height: 1.1;
-    font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .underrad span.et {
-    font-size: 9px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
-    color: var(--ink-hint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  #chipSekk { background: var(--terra-lys); border-color: var(--terra); }
-  #chipSekk b { color: var(--terra-dyp); }
-  #chipSekk span.et { color: var(--terra-dyp); opacity: .75; }
-  .chip.svak { background: var(--terra-lys); border-color: var(--terra-dyp); }
-  .chip.svak b { color: var(--terra-dyp); }
-  #sekkPil { display: none; margin-right: 4px; transform-origin: 50% 55%; }
-
-  #btnTur, #btnTurSlutt {
-    flex-direction: row; align-items: center; gap: 8px;
-    font-weight: 600; font-size: 14px; white-space: nowrap;
-  }
-  #btnTur.aktiv { background: var(--sage-lys); border-color: var(--sage); color: var(--sage-dyp); }
-  #btnTur.pauset { background: var(--terra-lys); border-color: var(--terra); color: var(--terra-dyp); }
-  #btnTurSlutt { display: none; color: var(--terra-dyp); border-color: var(--terra-dyp); }
-  #btnTurSlutt.vis { display: flex; }
-
+  /* ---------- kontekststriper ---------- */
   .stripe {
-    margin-top: 8px; pointer-events: auto; border-radius: 28px; padding: 14px 18px;
-    display: none; align-items: center; gap: 10px;
-    background: var(--ark); border: 1px solid var(--strek); box-shadow: 0 3px 10px rgba(46,43,37,.16);
+    margin-top: 8px; border-radius: 999px; padding: 0 8px 0 16px; min-height: 36px;
+    display: none; align-items: center; gap: 8px;
+    background: var(--ark); border: 1px solid var(--strek); box-shadow: var(--sk);
   }
   .stripe.vis { display: flex; }
-  .stripe .tekst { flex: 1; min-width: 0; font-weight: 600; font-size: 15px; color: var(--ink); }
+  .stripe .tekst { flex: 1; min-width: 0; font-weight: 600; font-size: 13px; }
   .stripe button {
-    min-height: 48px; padding: 0 18px; border-radius: 999px; cursor: pointer; flex: 0 0 auto;
-    border: 1px solid var(--strek); background: var(--papir); color: var(--ink);
-    font-weight: 600; font-size: 14px;
+    min-height: 28px; padding: 0 13px; border-radius: 999px; cursor: pointer; flex: 0 0 auto;
+    border: 1px solid var(--strek); background: transparent; font-weight: 700; font-size: 12px;
   }
   .stripe button.primar { background: var(--terra); border-color: var(--terra); color: var(--ark); }
   .stripe button.fare { color: var(--terra-dyp); }
   #benchBar { background: var(--terra); border-color: var(--terra); }
-  #benchBar .tekst { color: var(--ark); font-family: var(--disp); font-weight: 400; font-size: 26px; }
+  #benchBar .tekst { color: var(--ark); font-variant-numeric: tabular-nums; }
   #benchBar button { background: var(--ark); border-color: var(--ark); color: var(--terra-dyp); }
-  #benchBar button.fare { background: transparent; border-color: rgba(249,244,237,.6); color: var(--ark); }
+  #benchBar button.fare { background: transparent; border-color: rgba(249,244,237,.55); color: var(--ark); }
   #soneBar { background: var(--sage); border-color: var(--sage); }
-  #soneBar .tekst { color: var(--ark); font-family: var(--disp); font-weight: 400; font-size: 22px; }
-  #soneBar button { background: transparent; border-color: rgba(249,244,237,.6); color: var(--ark); }
+  #soneBar .tekst { color: var(--ark); }
+  #soneBar button { color: var(--ark); border-color: rgba(249,244,237,.55); }
   #soneBar button.primar { background: var(--ark); border-color: var(--ark); color: var(--sage-dyp); }
-  #soneBar button.fare { color: var(--ark); }
-  #varsel { background: var(--terra-lys); border-color: var(--terra); display: none; }
-  #varsel.vis { display: block; font-size: 14px; line-height: 1.45; color: var(--terra-dyp); }
-  #varsel b { color: var(--terra-dyp); }
+  #varsel { background: var(--terra-lys); border-color: var(--terra); padding: 9px 16px; }
+  #varsel.vis { display: block; font-size: 12.5px; line-height: 1.45; color: var(--terra-dyp); }
   #solStripe .tekst { color: var(--sage-dyp); }
   #solStripe.morkt .tekst { color: var(--terra-dyp); }
 
-  /* ---------- verktøy ---------- */
-  .verktoy {
-    position: absolute; right: 14px; z-index: 500;
-    bottom: calc(var(--rail) + 106px + env(safe-area-inset-bottom));
-    display: flex; flex-direction: column; gap: 10px; align-items: flex-end;
+  /* ---------- ankermenyer ---------- */
+  .meny {
+    position: absolute; z-index: 900; display: none; width: 236px; max-height: 74vh; overflow-y: auto;
+    background: var(--papir); border: 1px solid var(--strek-svak); border-radius: 22px;
+    padding: 8px; box-shadow: var(--sk-stor);
   }
-  .verktoy button {
-    width: 60px; height: 60px; border-radius: 50%; border: none;
-    background: var(--papir); color: var(--ink); font-size: 22px; cursor: pointer;
-    box-shadow: 0 3px 10px rgba(46,43,37,.28);
-    display: flex; align-items: center; justify-content: center; flex: 0 0 auto;
+  .meny.apen { display: block; }
+  #menyTur { top: var(--meny-y); left: 12px; }
+  #menyHoved { top: var(--meny-y); right: 12px; }
+  #menyMerk { right: 14px; bottom: calc(var(--bunn-y) + 68px); width: 250px; }
+  .meny-tit {
+    font-size: 9.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--ink-hint); padding: 5px 12px 8px;
   }
-  .verktoy button.pa { background: var(--terra); color: var(--ark); }
-  .verktoy button:active { transform: scale(.94); }
-  .verktoy button:focus-visible { outline: 2px solid var(--terra); outline-offset: 2px; }
-  #btnVerktoy.apen { background: var(--ink); color: var(--ark); }
-  .vifte { display: none; flex-direction: column; gap: 9px; align-items: flex-end; }
-  .vifte.apen { display: flex; }
-  .vifte button {
-    width: auto; height: 56px; padding: 0 20px; border-radius: 999px;
-    font-size: 14.5px; font-weight: 600; gap: 10px;
+  .mrad {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%;
+    min-height: 42px; padding: 0 13px; border: none; border-radius: 16px; cursor: pointer;
+    background: transparent; font-weight: 600; font-size: 14px; text-align: left;
   }
-  .vifte button::after { content: attr(data-navn); }
+  .mrad:hover { background: var(--sand); }
+  .mrad:active { background: var(--terra-lys); }
+  .mrad:focus-visible { outline: 2px solid var(--terra); outline-offset: -2px; }
+  .mrad:disabled { opacity: .45; cursor: default; }
+  .mrad .verdi { font-size: 12.5px; font-weight: 700; color: var(--ink-hint); white-space: nowrap; }
+  .mrad.pa { background: var(--terra-lys); }
+  .mrad.pa .verdi { color: var(--terra-dyp); }
+  .mrad.primar { background: var(--terra); color: var(--ark); }
+  .mrad.fare { color: var(--terra-dyp); }
+  #btnAktivitet[data-tilstand="plukk"] .verdi { color: var(--sage-dyp); }
+  #btnAktivitet[data-tilstand="transport"] .verdi,
+  #btnAktivitet[data-tilstand="pause"] .verdi { color: var(--terra-dyp); }
+  .meny-strek { display: block; height: 1px; margin: 6px 12px; background: var(--strek-svak); }
+  .meny-fot { padding: 10px 13px 4px; font-size: 12px; line-height: 1.5; color: var(--ink-svak); }
+  .meny-fot b { font-family: var(--disp); font-weight: 400; font-size: 14px; color: var(--ink); }
 
-  /* ---------- båndet ---------- */
-  .rail {
-    position: absolute; left: 0; right: 0; bottom: 0; z-index: 500;
-    padding: 16px 14px calc(22px + env(safe-area-inset-bottom));
-    background: var(--papir); border-radius: 32px 32px 0 0;
-    box-shadow: 0 -12px 32px rgba(46,43,37,.18);
-  }
-  .hurtig { display: flex; gap: 8px; margin-bottom: 14px; }
+  .hurtig { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 0 4px; }
   .hurtig button {
-    flex: 1; min-width: 0; min-height: 60px; border-radius: 999px;
-    border: 1px solid var(--strek); background: var(--ark); color: var(--ink);
-    font-weight: 600; font-size: 11.5px; cursor: pointer;
-    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+    display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 11px;
+    border: 1px solid var(--strek-svak); border-radius: 14px; cursor: pointer;
+    background: var(--ark); font-weight: 600; font-size: 12.5px; min-width: 0;
+  }
+  .hurtig button:active { background: var(--terra-lys); }
+  .hurtig button:focus-visible { outline: 2px solid var(--terra); outline-offset: 1px; }
+  .hurtig .dot { width: 11px; height: 11px; border-radius: 50%; flex: 0 0 auto; }
+  #btnAlleTyper { margin-top: 6px; color: var(--ink-svak); font-size: 13px; }
+
+  /* ---------- høyre klynge ---------- */
+  .hoyre {
+    position: absolute; right: 14px; bottom: var(--bunn-y); z-index: 700;
+    display: flex; flex-direction: column; gap: 10px; align-items: center;
+  }
+  .fab {
+    position: relative; width: 60px; height: 60px; border-radius: 50%; border: none; cursor: pointer;
+    background: var(--terra); color: var(--ark); box-shadow: 0 8px 24px rgba(140,73,26,.34);
+    display: flex; align-items: center; justify-content: center;
     transition: transform .1s ease;
   }
-  .hurtig button:active { transform: scale(.94); }
-  .hurtig button .dot { width: 16px; height: 16px; border-radius: 50%; flex: 0 0 auto; }
-  .hurtig button:focus-visible { outline: 2px solid var(--terra); outline-offset: 2px; }
-  .hovedrad { display: flex; align-items: center; gap: 14px; }
-  #btnSol {
-    width: 64px; height: 64px; border-radius: 50%; flex: 0 0 auto; cursor: pointer;
-    border: 2px solid var(--sage); background: transparent; color: var(--sage-dyp);
-    font-size: 26px; display: flex; align-items: center; justify-content: center;
+  .fab:active { transform: scale(.95); background: var(--terra-dyp); }
+  .fab.apen { background: var(--terra-dyp); }
+  .fab:focus-visible { outline: 2px solid var(--terra-dyp); outline-offset: 3px; }
+  .fabprikk {
+    position: absolute; top: 2px; right: 2px; width: 15px; height: 15px; border-radius: 50%;
+    background: #667BC1; box-shadow: 0 0 0 2.5px var(--papir);
   }
-  body.sol #btnSol { border-color: var(--terra); background: var(--terra-lys); color: var(--terra-dyp); }
-  #btnMerk {
-    flex: 1; min-height: var(--rail); border-radius: 999px; border: none; cursor: pointer;
-    background: var(--terra); color: var(--ark);
-    display: flex; align-items: center; justify-content: center; gap: 14px;
-    box-shadow: 0 12px 32px rgba(140,73,26,.32);
-    font-family: var(--disp); font-weight: 400; font-size: 26px;
-    transition: transform .1s ease;
+
+  #chipSekk {
+    position: absolute; left: 12px; bottom: calc(var(--bunn-y) + 12px); z-index: 700;
+    background: var(--terra-lys); border-color: var(--terra); height: 36px; padding: 0 14px;
   }
-  #btnMerk:active { transform: scale(.97); background: var(--terra-dyp); }
-  #btnMerk svg { flex: 0 0 auto; }
-  #btnSol:focus-visible, #btnMerk:focus-visible { outline: 2px solid var(--terra-dyp); outline-offset: 3px; }
+  #chipSekk b { color: var(--terra-dyp); font-size: 15px; }
+  #chipSekk .en { color: var(--terra-dyp); opacity: .8; }
+  #sekkPil { display: none; font-size: 11px; color: var(--terra-dyp); transform-origin: 50% 55%; }
 
   /* ---------- bunnark ---------- */
   .ark {
     position: absolute; left: 0; right: 0; bottom: 0; z-index: 1100;
-    background: var(--papir); border-radius: 32px 32px 0 0;
-    padding: 24px 20px calc(24px + env(safe-area-inset-bottom)); display: none;
-    max-height: 86vh; overflow-y: auto; box-shadow: 0 -12px 32px rgba(46,43,37,.22);
+    background: var(--papir); border-radius: 28px 28px 0 0;
+    padding: 20px 16px calc(18px + env(safe-area-inset-bottom)); display: none;
+    max-height: 84vh; overflow-y: auto; box-shadow: 0 -10px 30px rgba(46,43,37,.22);
   }
   .ark.apen { display: block; }
-  .ark h4 {
-    margin: 0 0 14px; font-family: var(--disp); font-weight: 400; font-size: 28px;
-    line-height: 1.1; color: var(--ink);
-  }
-  .ark .valg { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .ark h4 { margin: 0 0 12px; font-family: var(--disp); font-weight: 400; font-size: 23px; line-height: 1.1; }
+  .ark .valg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .ark .valg button {
-    min-height: 72px; padding: 14px 16px; border-radius: 28px; cursor: pointer;
-    border: 1px solid var(--strek); background: var(--ark); color: var(--ink);
-    font-weight: 600; font-size: 15.5px;
-    display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap;
+    min-height: 54px; padding: 11px 13px; border-radius: 18px; cursor: pointer;
+    border: 1px solid var(--strek); background: var(--ark);
+    font-weight: 600; font-size: 14px;
+    display: flex; align-items: center; justify-content: center; gap: 9px; flex-wrap: wrap;
   }
-  .ark .valg button .dot { width: 26px; height: 26px; border-radius: 50%; flex: 0 0 auto; }
+  .ark .valg button .dot { width: 18px; height: 18px; border-radius: 50%; flex: 0 0 auto; }
   .ark .valg button small {
-    display: block; flex-basis: 100%; color: var(--ink-svak); font-size: 12.5px;
-    font-weight: 400; line-height: 1.35; margin-top: 4px;
+    display: block; flex-basis: 100%; color: var(--ink-svak); font-size: 11.5px;
+    font-weight: 400; line-height: 1.35; margin-top: 3px; text-align: center;
   }
   .ark .valg button.valgt { border: 2px solid var(--terra); background: var(--terra-lys); }
   .ark input {
     width: 100%; background: var(--ark); color: var(--ink);
-    border: 1px solid var(--strek); border-radius: 999px; padding: 16px 22px;
-    font-size: 18px; font-family: var(--data); font-weight: 600; margin-bottom: 12px;
+    border: 1px solid var(--strek); border-radius: 999px; padding: 13px 18px;
+    font-size: 16px; font-family: var(--tekst); font-weight: 600; margin-bottom: 10px;
   }
   .ark input:focus-visible { outline: 2px solid var(--terra); outline-offset: 1px; }
-  .ark .to { display: flex; gap: 10px; }
+  .ark .to { display: flex; gap: 8px; }
   .ark .to button {
-    flex: 1; min-height: 64px; padding: 0 22px; border-radius: 999px; cursor: pointer;
+    flex: 1; min-height: 50px; padding: 0 18px; border-radius: 999px; cursor: pointer;
     border: 1px solid var(--strek); background: transparent; color: var(--ink-svak);
-    font-weight: 600; font-size: 16px;
+    font-weight: 700; font-size: 14px;
   }
-  .ark .to button.primar { background: var(--terra); border-color: var(--terra); color: var(--ark); font-size: 18px; }
+  .ark .to button.primar { background: var(--terra); border-color: var(--terra); color: var(--ark); font-size: 15px; }
   .ark .to button.fare { color: var(--terra-dyp); }
-  .ark .ark-hjelp { color: var(--ink-svak); font-size: 14.5px; line-height: 1.55; margin: -6px 0 18px; text-wrap: pretty; }
-  .ark .ark-avbryt { position: sticky; bottom: 0; z-index: 1; margin-top: 12px; padding-top: 10px; background: var(--papir); }
+  .ark .ark-hjelp { color: var(--ink-svak); font-size: 13px; line-height: 1.55; margin: -4px 0 14px; text-wrap: pretty; }
+  .ark .ark-avbryt { position: sticky; bottom: 0; z-index: 1; margin-top: 10px; padding-top: 8px; background: var(--papir); }
   .ark .ark-avbryt button { width: 100%; border-color: transparent; }
-  .ark .kartvalg { margin-top: 6px; }
-  .ark .kartvalg + h4 { margin-top: 24px; }
+  .ark .kartvalg { margin-top: 4px; }
+  .ark .kartvalg + h4 { margin-top: 20px; }
 
   /* ---------- panel ---------- */
   .panel {
     position: absolute; inset: 0; z-index: 1200; background: var(--papir);
-    padding: calc(26px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom));
+    padding: calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));
     overflow-y: auto; display: none;
   }
   .panel.apen { display: block; }
-  .panel h2 { font-family: var(--disp); font-weight: 400; font-size: 34px; line-height: 1; margin: 0 0 6px; }
-  .panel h2 .ver { font-size: 13px; color: var(--ink-hint); font-family: var(--tekst); font-weight: 600; margin-left: 8px; }
-  .panel p.hjelp { color: var(--ink-svak); font-size: 14px; margin: 0 0 20px; line-height: 1.55; }
+  .panel h2 { font-family: var(--disp); font-weight: 400; font-size: 28px; line-height: 1; margin: 0 0 6px; }
+  .panel h2 .ver { font-size: 12px; color: var(--ink-hint); font-family: var(--tekst); font-weight: 700; margin-left: 8px; }
+  .panel p.hjelp { color: var(--ink-svak); font-size: 13px; margin: 0 0 16px; line-height: 1.55; }
   .rad {
-    display: flex; justify-content: space-between; align-items: center; gap: 14px;
-    padding: 14px 0; border-bottom: 1px solid var(--strek-svak);
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 11px 0; border-bottom: 1px solid var(--strek-svak);
   }
-  .rad label { font-size: 15.5px; font-weight: 600; }
-  .rad small { display: block; color: var(--ink-svak); font-size: 12.5px; font-weight: 400; margin-top: 3px; line-height: 1.4; }
+  .rad label { font-size: 14px; font-weight: 600; }
+  .rad small { display: block; color: var(--ink-svak); font-size: 11.5px; font-weight: 400; margin-top: 2px; line-height: 1.4; }
   .rad select {
     background: var(--ark); color: var(--ink); border: 1px solid var(--strek);
-    border-radius: 999px; padding: 13px 18px; font-family: var(--data);
-    font-weight: 600; font-size: 15px; min-width: 104px; min-height: 48px;
+    border-radius: 999px; padding: 9px 14px; font-family: var(--tekst);
+    font-weight: 600; font-size: 13.5px; min-width: 96px; min-height: 38px;
   }
   .knapp {
-    display: block; width: 100%; margin-top: 10px; min-height: 60px; padding: 16px;
+    display: block; width: 100%; margin-top: 8px; min-height: 48px; padding: 13px;
     border-radius: 999px; border: 1px solid var(--strek); background: var(--ark); color: var(--ink);
-    font-weight: 600; font-size: 16px; cursor: pointer;
+    font-weight: 600; font-size: 14.5px; cursor: pointer;
   }
   .knapp.fare { color: var(--terra-dyp); border-color: var(--terra); }
   .knapp.primar { background: var(--terra); border-color: var(--terra); color: var(--ark); }
-  .seksjon { margin-top: 30px; }
+  .seksjon { margin-top: 26px; }
   .seksjon h3 {
-    font-size: 10.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+    font-size: 10px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
     color: var(--terra-dyp); margin: 0 0 8px;
   }
-  .liste { }
   .liste .el {
-    display: flex; align-items: center; gap: 12px; padding: 16px 18px; margin-bottom: 10px;
-    background: var(--ark); border-radius: 28px; font-size: 14px;
+    display: flex; align-items: center; gap: 10px; padding: 12px 14px; margin-bottom: 8px;
+    background: var(--ark); border-radius: 20px; font-size: 13px;
   }
   .liste .el .info { flex: 1; min-width: 0; }
-  .liste .el .info b { display: block; font-weight: 600; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .liste .el .info small { color: var(--ink-svak); font-size: 12.5px; }
+  .liste .el .info b { display: block; font-weight: 600; font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .liste .el .info small { color: var(--ink-svak); font-size: 11.5px; }
   .liste .el button {
-    min-height: 48px; padding: 0 18px; border-radius: 999px; border: 1px solid var(--strek);
-    background: transparent; color: var(--ink); font-size: 13.5px; font-weight: 600; cursor: pointer;
+    min-height: 38px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--strek);
+    background: transparent; font-size: 12.5px; font-weight: 700; cursor: pointer;
   }
   .liste .el button.fare { color: var(--terra-dyp); }
-  .liste .tom { color: var(--ink-svak); font-size: 14px; padding: 14px 0; }
+  .liste .tom { color: var(--ink-svak); font-size: 13px; padding: 12px 0; }
 
   /* ---------- koordinatskjerm ---------- */
   .koord {
     position: absolute; inset: 0; z-index: 1300; background: var(--ark);
     display: none; flex-direction: column; justify-content: center; align-items: flex-start;
-    text-align: left; padding: 36px 28px; cursor: pointer;
+    text-align: left; padding: 32px 26px; cursor: pointer;
   }
   .koord.apen { display: flex; }
-  .koord .et { font-size: 11px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-hint); }
-  .koord .stor { font-family: var(--disp); font-weight: 400; font-size: 52px; line-height: 1.1; margin-top: 16px; letter-spacing: -.02em; }
-  .koord .ddm { font-weight: 600; font-size: 22px; color: var(--sage-dyp); margin-top: 22px; line-height: 1.5; }
-  .koord .noy { font-weight: 600; font-size: 15px; color: var(--ink-svak); margin-top: 20px; }
+  .koord .et { font-size: 10.5px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-hint); }
+  .koord .stor { font-family: var(--disp); font-weight: 400; font-size: 46px; line-height: 1.1; margin-top: 14px; letter-spacing: -.02em; }
+  .koord .ddm { font-weight: 600; font-size: 20px; color: var(--sage-dyp); margin-top: 20px; line-height: 1.5; }
+  .koord .noy { font-weight: 600; font-size: 14px; color: var(--ink-svak); margin-top: 18px; }
   .koord .nod {
-    margin-top: 32px; background: var(--terra); color: var(--ark); border-radius: 32px;
-    padding: 20px 22px; width: 100%; font-family: var(--disp); font-weight: 400;
-    font-size: 22px; line-height: 1.3;
+    margin-top: 28px; background: var(--terra); color: var(--ark); border-radius: 26px;
+    padding: 18px 20px; width: 100%; font-family: var(--disp); font-weight: 400;
+    font-size: 19px; line-height: 1.35;
   }
-  .koord .lukk { margin-top: 18px; font-size: 13px; font-weight: 600; color: var(--ink-hint); }
+  .koord .lukk { margin-top: 16px; font-size: 12px; font-weight: 700; color: var(--ink-hint); }
 
   /* ---------- popup ---------- */
   .leaflet-popup-content-wrapper {
-    background: var(--papir); color: var(--ink); border-radius: 28px;
-    box-shadow: 0 12px 32px rgba(46,43,37,.22);
+    background: var(--papir); color: var(--ink); border-radius: 22px; box-shadow: var(--sk-stor);
   }
   .leaflet-popup-tip { background: var(--papir); }
-  .leaflet-popup-content { margin: 16px 18px; font-size: 14px; }
-  .pop-tit { font-family: var(--disp); font-weight: 400; font-size: 22px; line-height: 1.15; }
-  .pop-meta { font-size: 12.5px; color: var(--ink-svak); margin: 7px 0 12px; line-height: 1.55; }
-  .pop-felt { display: flex; gap: 8px; margin-bottom: 10px; }
+  .leaflet-popup-content { margin: 14px 16px; font-size: 13px; }
+  .pop-tit { font-family: var(--disp); font-weight: 400; font-size: 19px; line-height: 1.15; }
+  .pop-meta { font-size: 11.5px; color: var(--ink-svak); margin: 6px 0 10px; line-height: 1.55; }
+  .pop-felt { display: flex; gap: 7px; margin-bottom: 8px; }
   .pop-felt input {
-    flex: 1; min-width: 0; min-height: 48px; background: var(--ark); color: var(--ink);
-    border: 1px solid var(--strek); border-radius: 999px; padding: 10px 16px; font-size: 15px;
+    flex: 1; min-width: 0; min-height: 40px; background: var(--ark); color: var(--ink);
+    border: 1px solid var(--strek); border-radius: 999px; padding: 9px 14px; font-size: 14px;
   }
-  .pop-felt input.liter { flex: 0 0 74px; font-family: var(--data); font-weight: 600; text-align: center; padding: 10px 8px; }
-  .pop-knapper { display: flex; gap: 8px; flex-wrap: wrap; }
+  .pop-felt input.liter { flex: 0 0 62px; font-weight: 700; text-align: center; padding: 9px 6px; }
+  .pop-knapper { display: flex; gap: 7px; flex-wrap: wrap; }
   .pop-knapper button {
-    flex: 1 1 44%; min-height: 48px; padding: 0 12px; border-radius: 999px;
-    border: 1px solid var(--strek); background: var(--ark); color: var(--ink);
-    font-size: 13.5px; font-weight: 600; cursor: pointer;
+    flex: 1 1 44%; min-height: 40px; padding: 0 10px; border-radius: 999px;
+    border: 1px solid var(--strek); background: var(--ark);
+    font-size: 12.5px; font-weight: 700; cursor: pointer;
   }
   .pop-knapper button.slett { color: var(--terra-dyp); }
 
   .puls { width: 18px; height: 18px; border-radius: 50%; background: var(--terra); border: 3px solid var(--ark); animation: puls 1.2s ease-out infinite; }
   @keyframes puls { 0% { box-shadow: 0 0 0 0 rgba(198,113,57,.6); } 100% { box-shadow: 0 0 0 24px rgba(198,113,57,0); } }
 
-  /* Posisjon med kompassretning. Barnenoden roteres; Leaflet beholder sin egen transform på ikonet. */
   .posisjon-markor { width: 40px; height: 40px; position: relative; }
   .posisjon-retning { position: absolute; inset: 0; transform-origin: 50% 50%; transition: transform .12s linear; }
   .posisjon-kjegle {
@@ -371,25 +358,35 @@
   .spar {
     position: absolute; inset: 0; z-index: 2000; background: #181613;
     display: none; flex-direction: column; justify-content: space-between; align-items: flex-start;
-    padding: 52px 28px; text-align: left; touch-action: none;
+    padding: 48px 26px; text-align: left; touch-action: none;
     color: #3F3A33; font-family: var(--tekst);
   }
   .spar.apen { display: flex; }
-  .spar .hode { font-size: 10.5px; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; display: flex; align-items: center; gap: 10px; color: #645C50; }
+  .spar .hode { font-size: 10px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; display: flex; align-items: center; gap: 10px; color: #645C50; }
   .spar .dot2 { width: 8px; height: 8px; border-radius: 50%; background: #2A2A24; transition: background .3s; }
   .spar .dot2.blink { background: #8FA073; }
-  .spar .midt { font-size: 19px; font-weight: 600; line-height: 1.9; }
-  .spar .midt .kl { display: block; font-family: var(--disp); font-weight: 400; font-size: 62px; line-height: 1; color: #474238; margin-bottom: 18px; }
-  .spar .fot { font-size: 10.5px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; }
+  .spar .midt { font-size: 18px; font-weight: 600; line-height: 1.9; }
+  .spar .midt .kl { display: block; font-family: var(--disp); font-weight: 400; font-size: 56px; line-height: 1; color: #474238; margin-bottom: 16px; }
+  .spar .fot { font-size: 10px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
 
   .brod {
-    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 1050;
-    background: rgba(32,30,29,.9); color: var(--ark); border-radius: 999px;
-    padding: 14px 24px; font-size: 16px; font-weight: 600; text-align: center;
-    opacity: 0; pointer-events: none; transition: opacity .25s ease; max-width: 82vw;
-    box-shadow: 0 12px 32px rgba(46,43,37,.3);
+    position: absolute; left: 50%; transform: translateX(-50%);
+    bottom: calc(var(--bunn-y) + 78px); z-index: 1050;
+    background: rgba(32,30,29,.92); color: var(--ark); border-radius: 999px;
+    padding: 9px 10px 9px 18px; font-size: 14px; font-weight: 600;
+    display: flex; align-items: center; gap: 10px; max-width: 84vw;
+    opacity: 0; pointer-events: none; transition: opacity .25s ease;
+    box-shadow: var(--sk-stor);
   }
   .brod.vis { opacity: 1; }
+  .brod.harknapp { pointer-events: auto; }
+  .brod span { min-width: 0; }
+  .brod button {
+    flex: 0 0 auto; min-height: 30px; padding: 0 13px; border-radius: 999px; cursor: pointer;
+    border: 1px solid rgba(249,244,237,.4); background: transparent; color: var(--ark);
+    font-weight: 700; font-size: 12.5px;
+  }
+  .brod:not(.harknapp) { padding: 11px 20px; }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 </head>
@@ -398,21 +395,20 @@
 <div id="map"></div>
 
 <div class="topp">
-  <div class="dekning"><i id="dekningBar"></i></div>
-  <div class="tallstripe">
-    <div class="tall"><b id="vTid">—</b><span class="et">timer</span></div>
-    <span class="delelinje"></span>
-    <div class="tall"><b id="vDist">0,0</b><span class="et">km</span></div>
+  <div class="topprad">
+    <button class="pille" id="statPille" data-tilstand="ukjent" title="Turen">
+      <span class="prikk"></span>
+      <b id="vTid">—</b>
+      <span class="skille"></span>
+      <b id="vDist">0,0</b><span class="en">km</span>
+      <span class="karet"></span>
+    </button>
+    <button class="mini" id="chipGps" title="Vis posisjonen i store tall"><b id="vGps">søker</b></button>
     <span class="fyll"></span>
-    <button id="btnAktivitet" data-tilstand="ukjent" title="Trykk for å bytte Auto / Plukker / Går / Transport" disabled>Auto · —</button>
+    <button class="rund" id="btnHovedmeny" title="Meny" aria-label="Meny"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
   </div>
-  <div class="underrad">
-    <button id="btnTur" title="Start, pause eller fortsett tur">▶ Start tur</button>
-    <button id="btnTurSlutt" title="Avslutt og lagre turen">■ Avslutt</button>
-    <button class="chip" id="chipGps" title="Vis posisjonen i store tall"><b id="vGps">søker</b><span class="et">nøyaktighet</span></button>
-    <div class="chip"><b id="vAreal">0 %</b><span class="et">undersøkt</span></div>
-    <button class="chip" id="chipSekk" style="display:none"><b><span id="sekkPil">▲</span><span id="vSekk">—</span></b><span class="et" id="etSekk">til sekken</span></button>
-  </div>
+  <div class="dekning"><i id="dekningBar"></i></div>
+  <div class="stripe" id="varsel"><div><b>Ingen GPS.</b> <span id="varselTekst"></span></div></div>
   <div class="stripe" id="solStripe"><div class="tekst" id="solTekst"></div></div>
   <div class="stripe" id="benchBar">
     <div class="tekst" id="benchTekst">0:00</div>
@@ -425,34 +421,51 @@
     <button class="primar" id="btnSoneFerdig">Ferdig</button>
     <button class="fare" id="btnSoneAvbryt">✕</button>
   </div>
-  <div class="stripe" id="varsel"><div><b>Ingen GPS.</b> <span id="varselTekst"></span></div></div>
 </div>
 
-<div class="verktoy">
-  <div class="vifte" id="vifte">
-    <button id="btnTaake" class="pa" data-navn="Tåke" title="Tåke av/på">☁</button>
-    <button id="btnBench" data-navn="Måling" title="Start måling">⏱</button>
-    <button id="btnSone" data-navn="Plukksone" title="Ny plukksone">⬡</button>
-    <button id="btnLag" data-navn="Kart og turlag" title="Bytt kartlag">▤</button>
-    <button id="btnSpar" data-navn="Strømsparing" title="Strømsparing">◐</button>
-    <button id="btnMeny" data-navn="Innstillinger" title="Meny">☰</button>
-  </div>
-  <button id="btnFolg" class="pa" title="Følg posisjon">◎</button>
-  <button id="btnVerktoy" title="Verktøy">⋯</button>
+<div class="meny" id="menyTur">
+  <div class="meny-tit">Turen</div>
+  <button class="mrad primar" id="btnTur">Start tur</button>
+  <button class="mrad fare" id="btnTurSlutt" style="display:none">Avslutt turen</button>
+  <button class="mrad" id="btnAktivitet" data-tilstand="ukjent" disabled>Aktivitet<span class="verdi" id="aktVerdi">—</span></button>
+  <button class="mrad" id="btnBench">Måling</button>
+  <div class="meny-fot"><b id="vAreal">0 %</b> undersøkt i kartutsnittet</div>
 </div>
 
-<div class="rail">
+<div class="meny" id="menyHoved">
+  <button class="mrad" id="btnSone">Ny plukksone</button>
+  <button class="mrad" id="btnLag">Kart og turlag</button>
+  <button class="mrad" id="btnTaake">Tåke<span class="verdi" id="taakeVerdi">På</span></button>
+  <button class="mrad" id="btnSol">Solmodus<span class="verdi" id="solVerdi">Av</span></button>
+  <button class="mrad" id="btnSpar">Strømsparing</button>
+  <span class="meny-strek"></span>
+  <button class="mrad" id="btnMeny">Innstillinger og data</button>
+</div>
+
+<div class="meny" id="menyMerk">
+  <div class="meny-tit">Merk her</div>
   <div class="hurtig">
     <button data-art="blabaer" data-kategori="baer"><span class="dot" style="background:#667BC1"></span>Blåbær</button>
     <button data-art="tyttebaer" data-kategori="baer"><span class="dot" style="background:#C4545C"></span>Tyttebær</button>
+    <button data-art="multe" data-kategori="baer"><span class="dot" style="background:#E6A84D"></span>Multer</button>
+    <button data-type="sopp"><span class="dot" style="background:#D6A85F"></span>Sopp</button>
     <button data-type="senere"><span class="dot" style="background:#A8C08A"></span>Tilbake</button>
     <button data-type="sekk"><span class="dot" style="background:#D9A441"></span>Sekken</button>
   </div>
-  <div class="hovedrad">
-    <button id="btnSol" title="Solmodus — maks kontrast">☀</button>
-    <button id="btnMerk" title="Sett merke her"><svg width="34" height="34" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M24 43C24 34 21 27 22 17c.5-5 1.5-8 2-11" stroke="#F9F4ED" stroke-width="3.4" stroke-linecap="round"/><circle cx="14" cy="27" r="5.4" fill="#F9F4ED"/><circle cx="33" cy="21" r="5.8" fill="#F9F4ED"/><circle cx="15" cy="15" r="4.6" fill="#F9F4ED"/><circle cx="31" cy="9" r="4.2" fill="#F9F4ED"/></svg>Merk her</button>
-  </div>
+  <button class="mrad" id="btnAlleTyper">Alle typer …</button>
 </div>
+
+<div class="hoyre">
+  <button class="rund pa" id="btnFolg" title="Følg posisjon" aria-label="Følg posisjon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.75" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
+  <button class="fab" id="btnMerk" title="Merk her — hold inne for andre typer">
+    <svg width="30" height="30" viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M24 43C24 34 21 27 22 17c.5-5 1.5-8 2-11" stroke="#F9F4ED" stroke-width="3.4" stroke-linecap="round"/><circle cx="14" cy="27" r="5.4" fill="#F9F4ED"/><circle cx="33" cy="21" r="5.8" fill="#F9F4ED"/><circle cx="15" cy="15" r="4.6" fill="#F9F4ED"/><circle cx="31" cy="9" r="4.2" fill="#F9F4ED"/></svg>
+    <span class="fabprikk" id="fabPrikk"></span>
+  </button>
+</div>
+
+<button class="pille" id="chipSekk" style="display:none" title="Retur til sekken">
+  <span id="sekkPil">▲</span><b id="vSekk">—</b><span class="en" id="etSekk">til sekken</span>
+</button>
 
 <div class="ark" id="ark"></div>
 
@@ -599,7 +612,8 @@ const SOPPARTER = {
 const standard = {
   grid: 12, radius: 15, walkRadius: 5, acc: 35, wake: 1, fog: 1, track: 1,
   rate: 1, soner: 1, lag: "topo", fotruter: 0, umerkedeFotruter: 0, lat0: null, aar: "alle",
-  spar: 2, bg: 0, sporModus: "auto"
+  spar: 2, bg: 0, sporModus: "auto",
+  merkeType: "funn", merkeKategori: "baer", merkeArt: "blabaer"
 };
 
 let S = Object.assign({}, standard);
@@ -953,6 +967,7 @@ const map = L.map("map", {
   center: [59.13, 10.22], zoom: 13, zoomControl: false,
   maxZoom: 20, zoomSnap: 0.25, zoomDelta: 0.5, bounceAtZoomLimits: false
 });
+map.attributionControl.setPosition("bottomleft");
 map.attributionControl.setPrefix("");
 const KARTVERK_ATTR = '&copy; <a href="https://kartverket.no/">Kartverket</a>';
 function lagGrunnkart(id) {
@@ -1607,11 +1622,20 @@ function nyttMerke(type, punkt, kategori = null, art = null) {
   });
   merker.push(m);
   if (navigator.vibrate) navigator.vibrate(22);
+  if (type !== "sekk") {
+    S.merkeType = type; S.merkeKategori = kategori; S.merkeArt = art;
+    oppdaterFab();
+  }
   lagreNa(); tegnMerker(); oppdaterHud(); fyllAar();
-  melding(merkeInfo(m).navn + (punkt || posisjon ? "" : " — satt på kartmidten"));
+  melding(merkeInfo(m).navn + (punkt || posisjon ? "" : " — på kartmidten"), 3200,
+    type === "sekk" ? null : () => {
+      merker = merker.filter(x => x.id !== m.id);
+      lagreNa(); tegnMerker(); oppdaterHud();
+      melding("Merket fjernet");
+    });
   if (type === "sekk" && !sekkHintVist) {
     sekkHintVist = true;
-    setTimeout(() => melding("Tips: trykk på sekkechipen øverst for retur langs sporet", 3500), 2300);
+    setTimeout(() => melding("Tips: trykk sekkepilla nede til venstre for retur langs sporet", 3500), 2300);
   }
 }
 let sekkHintVist = false;
@@ -1648,6 +1672,11 @@ function turVarighet(t, naa = Date.now()) {
   const pauselengde = Math.max(0, +t.pauseMs || 0) +
     (!t.t1 && t.pauseStart ? Math.max(0, naa - t.pauseStart) : 0);
   return Math.max(0, slutt - t.t0 - pauselengde);
+}
+function fmtKort(ms) {
+  const min = Math.floor(ms / 60000);
+  if (min < 60) return min + " min";
+  return Math.floor(min / 60) + "t " + String(min % 60).padStart(2, "0");
 }
 function fmtVarighet(ms) {
   const min = Math.floor(ms / 60000);
@@ -1849,33 +1878,33 @@ function oppdaterTurUI() {
   const btn = document.getElementById("btnTur");
   const slutt = document.getElementById("btnTurSlutt");
   const akt = document.getElementById("btnAktivitet");
+  const verdi = document.getElementById("aktVerdi");
   const tid = document.getElementById("vTid");
-  btn.classList.remove("aktiv", "pauset");
+  const pille = document.getElementById("statPille");
+  const bm = document.getElementById("btnBench");
+  bm.textContent = benchAktiv ? "Fullfør måling" : "Start måling";
   if (!t) {
     tid.textContent = "—";
-    btn.textContent = "▶ Start tur";
-    slutt.classList.remove("vis");
+    btn.textContent = "Start tur";
+    btn.classList.add("primar");
+    slutt.style.display = "none";
     akt.disabled = true;
-    akt.textContent = "Auto · —";
+    verdi.textContent = "—";
     akt.dataset.tilstand = "ukjent";
+    pille.dataset.tilstand = "ukjent";
     return;
   }
-  slutt.classList.add("vis");
-  tid.textContent = fmtVarighet(turVarighet(t));
+  btn.classList.remove("primar");
+  slutt.style.display = "";
+  tid.textContent = fmtKort(turVarighet(t));
   akt.disabled = !!benchAktiv;
-  if (t.status === "pauset") {
-    btn.classList.add("pauset");
-    btn.textContent = "▶ Fortsett";
-    akt.dataset.tilstand = "pause";
-  } else {
-    btn.classList.add("aktiv");
-    btn.textContent = "Ⅱ Pause tur";
-  }
+  btn.textContent = t.status === "pauset" ? "Fortsett turen" : "Pause turen";
   const vis = t.status === "pauset" ? "pause" : sporTilstand;
   akt.dataset.tilstand = vis;
-  akt.textContent = S.sporModus === "auto"
-    ? `Auto · ${SPOR_NAVN[vis] || "—"}`
-    : `Man · ${SPOR_NAVN[S.sporModus] || S.sporModus}`;
+  pille.dataset.tilstand = vis;
+  verdi.textContent = S.sporModus === "auto"
+    ? "Auto · " + (SPOR_NAVN[vis] || "—")
+    : SPOR_NAVN[S.sporModus] || S.sporModus;
 }
 
 function byttSporModus() { visModusvalg(false); }
@@ -2523,14 +2552,26 @@ ${trk}
    12. Grensesnitt
    ============================================================ */
 let brodTimer;
-function melding(t, ms) {
+function melding(t, ms, angre) {
   const b = document.getElementById("brod");
-  b.textContent = t; b.classList.add("vis");
+  b.textContent = "";
+  const s = document.createElement("span");
+  s.textContent = t;
+  b.appendChild(s);
+  if (angre) {
+    const k = document.createElement("button");
+    k.textContent = "Angre";
+    k.onclick = e => { e.stopPropagation(); b.classList.remove("vis"); angre(); };
+    b.appendChild(k);
+  }
+  b.classList.toggle("harknapp", !!angre);
+  b.classList.add("vis");
   clearTimeout(brodTimer);
   brodTimer = setTimeout(() => b.classList.remove("vis"), ms || 2000);
 }
 
 function visArk(html) {
+  lukkMenyer();
   const a = document.getElementById("ark");
   a.innerHTML = html;
   a.scrollTop = 0;
@@ -2540,30 +2581,83 @@ function lukkArk() { document.getElementById("ark").classList.remove("apen"); }
 
 document.querySelectorAll(".hurtig button").forEach(b =>
   b.addEventListener("click", () => {
+    lukkMenyer();
     if (b.dataset.art) nyttMerke("funn", null, b.dataset.kategori || "baer", b.dataset.art);
     else if (b.dataset.type === "funn") velgArt("baer");
     else if (b.dataset.type === "sopp") velgArt("sopp");
     else nyttMerke(b.dataset.type);
   }));
 
-/* Verktøyvifta: seks sjeldne funksjoner bak én knapp */
-const btnVerktoy = document.getElementById("btnVerktoy");
-const vifte = document.getElementById("vifte");
-function lukkVifte() { vifte.classList.remove("apen"); btnVerktoy.classList.remove("apen"); }
-btnVerktoy.addEventListener("click", () => {
-  vifte.classList.toggle("apen");
-  btnVerktoy.classList.toggle("apen", vifte.classList.contains("apen"));
+/* ---- Ankermenyer: kartet er stort, alt sjeldent ligger bak et anker ---- */
+const MENYER = { menyTur: "statPille", menyHoved: "btnHovedmeny", menyMerk: "btnMerk" };
+function lukkMenyer(unntatt) {
+  for (const id in MENYER) {
+    if (id === unntatt) continue;
+    document.getElementById(id).classList.remove("apen");
+    document.getElementById(MENYER[id]).classList.remove("apen");
+  }
+}
+function veksleMeny(id) {
+  const apen = document.getElementById(id).classList.contains("apen");
+  lukkMenyer();
+  if (apen) return;
+  if (id === "menyTur") oppdaterTurUI();
+  document.getElementById(id).classList.add("apen");
+  document.getElementById(MENYER[id]).classList.add("apen");
+}
+document.getElementById("statPille").addEventListener("click", () => veksleMeny("menyTur"));
+document.getElementById("btnHovedmeny").addEventListener("click", () => veksleMeny("menyHoved"));
+document.querySelectorAll(".meny .mrad").forEach(b =>
+  b.addEventListener("click", () => setTimeout(() => lukkMenyer(), 0)));
+map.on("click dragstart zoomstart", () => lukkMenyer());
+document.addEventListener("keydown", e => { if (e.key === "Escape") lukkMenyer(); });
+
+/* ---- Merkeknappen: ett trykk gjentar forrige type, hold inne for menyen ---- */
+const MERKE_TYPER = ["funn", "senere", "tomt", "myr", "kratt", "bratt", "sekk"];
+function standardMerke() {
+  return {
+    type: MERKE_TYPER.includes(S.merkeType) ? S.merkeType : "funn",
+    kategori: S.merkeKategori === "sopp" ? "sopp" : "baer",
+    art: S.merkeArt || null
+  };
+}
+function oppdaterFab() {
+  const d = standardMerke();
+  const info = merkeInfo(d);
+  document.getElementById("fabPrikk").style.background = info.farge;
+  document.getElementById("btnMerk").title =
+    "Merk «" + info.navn + "» her — hold inne for andre typer";
+}
+const fabMerk = document.getElementById("btnMerk");
+let fabTimer = null, fabLang = false;
+fabMerk.addEventListener("pointerdown", () => {
+  fabLang = false;
+  clearTimeout(fabTimer);
+  fabTimer = setTimeout(() => {
+    fabLang = true;
+    if (navigator.vibrate) navigator.vibrate(14);
+    veksleMeny("menyMerk");
+  }, 420);
 });
-vifte.querySelectorAll("button").forEach(b => b.addEventListener("click", lukkVifte));
-map.on("click dragstart", lukkVifte);
+["pointerup", "pointercancel", "pointerleave"].forEach(e =>
+  fabMerk.addEventListener(e, () => clearTimeout(fabTimer)));
+fabMerk.addEventListener("contextmenu", e => e.preventDefault());
+fabMerk.addEventListener("click", () => {
+  if (fabLang) { fabLang = false; return; }
+  if (document.getElementById("menyMerk").classList.contains("apen")) { lukkMenyer(); return; }
+  const d = standardMerke();
+  if (d.type === "funn") nyttMerke("funn", null, d.kategori, d.art);
+  else nyttMerke(d.type);
+});
+document.getElementById("btnAlleTyper").addEventListener("click", () => { lukkMenyer(); visMerkeArk(null); });
 
 /* Solmodus: maks kontrast i sterkt lys */
 document.getElementById("btnSol").addEventListener("click", () => {
   const pa = document.body.classList.toggle("sol");
+  document.getElementById("solVerdi").textContent = pa ? "På" : "Av";
+  document.getElementById("btnSol").classList.toggle("pa", pa);
   melding(pa ? "Solmodus — maks kontrast" : "Normal kontrast");
 });
-
-document.getElementById("btnMerk").addEventListener("click", () => { lukkVifte(); visMerkeArk(null); });
 
 document.getElementById("btnFolg").addEventListener("click", e => {
   aktiverKompass();
@@ -2578,6 +2672,7 @@ function settTaake(pa) {
   S.fog = pa ? 1 : 0;
   document.getElementById("setFog").value = String(S.fog);
   document.getElementById("btnTaake").classList.toggle("pa", !!pa);
+  document.getElementById("taakeVerdi").textContent = S.fog ? "På" : "Av";
   taake.tegn();
   lagreNa();
 }
@@ -2637,7 +2732,7 @@ function visKartvalg() {
 
 document.getElementById("btnLag").addEventListener("click", visKartvalg);
 document.getElementById("btnMeny").addEventListener("click", () => {
-  map.closePopup(); lukkArk();
+  map.closePopup(); lukkArk(); lukkMenyer();
   visLagringStatus(); oppdaterHud(); fyllLister();
   document.getElementById("hullTekst").textContent = hullTekst();
   document.getElementById("panel").classList.add("apen");
@@ -2694,7 +2789,7 @@ function fyllLister() {
   }
 
   const sl = document.getElementById("soneListe");
-  sl.innerHTML = soner.length ? "" : '<div class="tom">Ingen soner ennå — trykk ⬡ på kartet.</div>';
+  sl.innerHTML = soner.length ? "" : '<div class="tom">Ingen soner ennå — start én fra menyen øverst til høyre.</div>';
   for (const s of soner) {
     const st = soneStat(s);
     const el = document.createElement("div");
@@ -2715,7 +2810,7 @@ function fyllLister() {
   const rater = bs.map(rateLT).sort((a, b) => a - b);
   document.getElementById("benchOppsummering").textContent = rater.length
     ? `${rater.length} ${rater.length === 1 ? "måling" : "målinger"}: ${fmt1(rater[0])}–${fmt1(rater[rater.length - 1])} l/t · median ${fmt1(medianRate(filterAar))}`
-    : "Start en måling med ⏱ når du begynner å plukke.";
+    : "Start en måling fra turmenyen når du begynner å plukke.";
   bl.innerHTML = "";
   for (const b of [...bs].reverse().slice(0, 25)) {
     const d = new Date(b.t0);
@@ -2938,6 +3033,8 @@ function fyllAar() {
   if (S.track) tegnSpor();
   if (spor.length) map.setView([spor[spor.length - 1][0], spor[spor.length - 1][1]], 15);
   document.getElementById("btnTaake").classList.toggle("pa", S.fog === 1);
+  document.getElementById("taakeVerdi").textContent = S.fog ? "På" : "Av";
+  oppdaterFab();
   visLagringStatus();
   oppdaterTurUI();
   oppdaterHud();
