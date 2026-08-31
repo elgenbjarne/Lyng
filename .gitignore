@@ -1,4 +1,8 @@
 node_modules/
 www/
 android/
+!native/android/
+!native/android/**
+native/android/.gradle/
+native/android/build/
 *.apk

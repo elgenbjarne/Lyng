@@ -5,10 +5,15 @@ on:
   push:
     paths:
       - 'lyng.html'
+      - 'src/**'
+      - 'native/**'
+      - 'tests/**'
       - 'package.json'
       - 'package-lock.json'
       - 'capacitor.config.json'
       - 'verktoy/klargjor.mjs'
+      - 'verktoy/bygg-web.mjs'
+      - 'verktoy/sjekk.mjs'
       - '.github/workflows/bygg.yml'
 
 permissions:
@@ -60,45 +65,30 @@ jobs:
       - name: Installer avhengigheter
         run: npm ci
 
-      - name: Legg web-appen i www/
+      - name: Test Survey-kjernen og syntaks
         run: |
-          mkdir -p www/vendor
-          cp lyng.html www/index.html
-          cp node_modules/leaflet/dist/leaflet.js www/vendor/leaflet.js
-          cp node_modules/leaflet/dist/leaflet.css www/vendor/leaflet.css
-          cp -R node_modules/leaflet/dist/images www/vendor/images
+          npm test
+          npm run check
 
-      # Grensesnittet bruker Caprasimo til tall og overskrifter og Figtree til
-      # brødtekst. Fontene legges lokalt i APK-en slik Leaflet gjøres, ellers
-      # faller appen tilbake til systemfonten når telefonen er uten nett.
-      - name: Legg fontene i www/vendor
-        run: |
-          for f in figtree caprasimo; do
-            mkdir -p "www/vendor/$f"
-            cp -R "node_modules/@fontsource/$f/files" "www/vendor/$f/files"
-            cp "node_modules/@fontsource/$f/index.css" "www/vendor/$f/index.css"
-          done
-          test -f www/vendor/figtree/index.css
-          test -f www/vendor/caprasimo/index.css
-          echo "Fonter lagt inn:"
-          du -sh www/vendor/figtree www/vendor/caprasimo
+      - name: Klargjør offline web-app
+        run: npm run build:web
 
       - name: Lag Android-prosjektet
         run: npx cap add android
+
+      - name: Synk
+        run: npx cap sync android
 
       - name: Tilpass Android-prosjektet
         env:
           BYGG: ${{ github.run_number }}
         run: node verktoy/klargjor.mjs
 
-      - name: Synk
-        run: npx cap sync android
-
       - name: Bygg APK
         working-directory: android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew testDebugUnitTest lintDebug assembleDebug --no-daemon
 
       - name: Legg APK-en ut for nedlasting
         env:
@@ -111,6 +101,7 @@ jobs:
             --notes "Bygg ${{ github.run_number }}, laget $(date -u '+%d.%m.%Y %H:%M') UTC"
 
       - name: Reserve - last ned som artefakt
+        if: ${{ always() && hashFiles('lyng.apk') != '' }}
         uses: actions/upload-artifact@v4
         with:
           name: lyng-apk

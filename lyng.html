@@ -387,6 +387,44 @@
     font-weight: 700; font-size: 12.5px;
   }
   .brod:not(.harknapp) { padding: 11px 20px; }
+
+  /* ---------- aktiv områdeundersøkelse ---------- */
+  .survey-card {
+    display: none; margin-top: 8px; padding: 12px; border-radius: 22px;
+    background: rgba(249,244,237,.96); border: 1px solid var(--strek); box-shadow: var(--sk-stor);
+    max-width: 430px; backdrop-filter: blur(8px);
+  }
+  .survey-card.vis { display: block; }
+  .survey-card-hode { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .survey-card-hode b { font-family: var(--disp); font-weight: 400; font-size: 17px; }
+  .survey-card-hode span { color: var(--ink-svak); font-size: 11px; font-weight: 700; }
+  .survey-tall { display: grid; grid-template-columns: 1.1fr 1fr 1fr; gap: 8px; margin-top: 9px; }
+  .survey-tall div { min-width: 0; }
+  .survey-tall b { display: block; font-family: var(--disp); font-weight: 400; font-size: 21px; line-height: 1; }
+  .survey-tall small { display: block; color: var(--ink-svak); font-size: 10px; margin-top: 4px; }
+  .survey-modi { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 11px; }
+  .survey-modi button, .survey-handlinger button {
+    min-height: 42px; border: 1px solid var(--strek); border-radius: 14px;
+    background: var(--ark); font-size: 11.5px; font-weight: 700; cursor: pointer;
+  }
+  .survey-modi button.valgt { background: var(--sage); border-color: var(--sage); color: var(--ark); }
+  .survey-modi button[data-survey-activity="TRANSPORT"].valgt { background: var(--terra); border-color: var(--terra); }
+  .survey-handlinger { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; margin-top: 6px; }
+  .survey-handlinger button:first-child { background: var(--terra-lys); border-color: rgba(198,113,57,.45); color: var(--terra-dyp); }
+  .survey-gps-poor { color: var(--terra-dyp) !important; }
+  .survey-debug {
+    margin-top: 8px; padding: 8px 10px; border-radius: 12px; white-space: pre-wrap;
+    background: #20201f; color: #d8eadb; font: 10px/1.45 ui-monospace, SFMono-Regular, Consolas, monospace;
+  }
+
+  .survey-rating { grid-template-columns: repeat(4, 1fr) !important; }
+  .survey-rating button { min-height: 62px !important; padding: 8px 5px !important; font-size: 12px !important; }
+  .survey-rating .rating-dot { width: 17px; height: 17px; border-radius: 50%; display: block; }
+  .survey-vertex {
+    width: 22px; height: 22px; border-radius: 50%; background: var(--ark);
+    border: 3px solid var(--sage); box-shadow: 0 2px 8px rgba(32,30,29,.32);
+  }
+
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 </head>
@@ -421,11 +459,30 @@
     <button class="primar" id="btnSoneFerdig">Ferdig</button>
     <button class="fare" id="btnSoneAvbryt">✕</button>
   </div>
+  <div class="survey-card" id="surveyCard" aria-live="polite">
+    <div class="survey-card-hode"><b id="surveyAktivitet">Undersøker</b><span id="surveyGps">GPS: søker</span></div>
+    <div class="survey-tall">
+      <div><b id="surveyPst">—</b><small>undersøkt</small></div>
+      <div><b id="surveyGjenstar">—</b><small id="surveyGjenstarLabel">gjenstår</small></div>
+      <div><b id="surveyDistanse">0,0 km</b><small id="surveyTid">0:00:00</small></div>
+    </div>
+    <div class="survey-modi">
+      <button data-survey-activity="SEARCHING">Undersøker</button>
+      <button data-survey-activity="PICKING">Plukker</button>
+      <button data-survey-activity="TRANSPORT">Transport</button>
+    </div>
+    <div class="survey-handlinger">
+      <button id="btnFinnHull">Finn neste hull</button>
+      <button id="btnSurveyOmrade">Bytt område</button>
+      <button id="btnSurveyFunn">Registrer funn</button>
+    </div>
+    <div class="survey-debug" id="surveyDebug" hidden></div>
+  </div>
 </div>
 
 <div class="meny" id="menyTur">
   <div class="meny-tit">Turen</div>
-  <button class="mrad primar" id="btnTur">Start tur</button>
+  <button class="mrad primar" id="btnTur">Start</button>
   <button class="mrad fare" id="btnTurSlutt" style="display:none">Avslutt turen</button>
   <button class="mrad" id="btnAktivitet" data-tilstand="ukjent" disabled>Aktivitet<span class="verdi" id="aktVerdi">—</span></button>
   <button class="mrad" id="btnBench">Måling</button>
@@ -433,7 +490,8 @@
 </div>
 
 <div class="meny" id="menyHoved">
-  <button class="mrad" id="btnSone">Ny plukksone</button>
+  <button class="mrad" id="btnSone">Tegn område</button>
+  <button class="mrad" id="btnEkskluder" style="display:none">Marker utilgjengelig</button>
   <button class="mrad" id="btnLag">Kart og turlag</button>
   <button class="mrad" id="btnTaake">Tåke<span class="verdi" id="taakeVerdi">På</span></button>
   <button class="mrad" id="btnSol">Solmodus<span class="verdi" id="solVerdi">Av</span></button>
@@ -518,6 +576,18 @@
       <label>Krev nøyaktighet<small>Dårligere fikser forkastes</small></label>
       <select id="setAcc"><option value="20">20 m</option><option value="35">35 m</option><option value="60">60 m</option><option value="9999">Godta alt</option></select>
     </div>
+    <div class="rad">
+      <label>Survey-historikk<small>Vis tidligere undersøkelser som eget kartlag</small></label>
+      <select id="setSurveyHistory"><option value="current">Bare aktiv</option><option value="7">Siste 7 dager</option><option value="30">Siste 30 dager</option><option value="all">Alle</option></select>
+    </div>
+    <div class="rad">
+      <label>Minste relevante hull<small>Ignorerer små GIS-/GPS-glipper</small></label>
+      <select id="setSurveyHole"><option value="10">10 m²</option><option value="20">20 m²</option><option value="50">50 m²</option><option value="100">100 m²</option></select>
+    </div>
+    <div class="rad">
+      <label>Survey-varsler<small>Haptikk ved dårlig GPS og høy overlapp</small></label>
+      <select id="setSurveyHaptics"><option value="1">På</option><option value="0">Av</option></select>
+    </div>
     <div class="rad" id="radWake">
       <label>Hold skjermen våken<small>Nødvendig for sporing i nettleser</small></label>
       <select id="setWake"><option value="1">På</option><option value="0">Av</option></select>
@@ -572,6 +642,11 @@
 <script>
 if (!window.L) document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"><\/script>');
 </script>
+<script src="vendor/turf.min.js"></script>
+<script src="file-export.js"></script>
+<script src="survey-core.js"></script>
+<script src="survey-storage.js"></script>
+<script src="survey-track-view.js"></script>
 <script>
 "use strict";
 
@@ -579,7 +654,12 @@ if (!window.L) document.write('<script src="https://cdnjs.cloudflare.com/ajax/li
    1. Tilstand og lagring
    ============================================================ */
 const NOKKEL = "lyng:data";
-const SKJEMA = 33;
+const SKJEMA = 42;
+const SURVEY = window.LyngSurveyCore;
+const SURVEY_STORE = window.LyngSurveyStorage;
+const SURVEY_TRACK = window.LyngSurveyTrackView;
+const FILE_EXPORT = window.LyngFileExport;
+const SURVEY_DEBUG = new URLSearchParams(location.search).get("surveyDebug") === "1";
 const DEKNING = { passert: 1, undersokt: 2 };
 const FARGER = {
   funn:   { farge: "#7B8CC4", navn: "Bær her" },
@@ -612,7 +692,8 @@ const SOPPARTER = {
 const standard = {
   grid: 12, radius: 15, walkRadius: 5, acc: 35, wake: 1, fog: 1, track: 1,
   rate: 1, soner: 1, lag: "topo", fotruter: 0, umerkedeFotruter: 0, lat0: null, aar: "alle",
-  spar: 2, bg: 0, sporModus: "auto",
+  spar: 2, bg: 0, sporModus: "auto", surveyHistorikk: "current", surveyDebug: 0,
+  surveyHaptics: 1, surveyHoleArea: 20,
   merkeType: "funn", merkeKategori: "baer", merkeArt: "blabaer"
 };
 
@@ -623,6 +704,8 @@ let merker = [];             // {id,type,kategori?,art?,lat,lng,t,liter,notat,tu
 let soner = [];              // {id,navn,pkt:[[lat,lng]...],t}
 let bench = [];              // {id,t0,t1,liter,metode,dist,celler:[],lat,lng,turId?}
 let turer = [];              // {id,t0,t1,status,distanse,spor:[[lat,lng,t,tilstand?,acc?]],sesong}
+let surveyObservasjoner = []; // {id,surveyId,lat,lng,timestamp,rating,note?}
+let surveyUtelukkelser = [];  // {id,surveyAreaId,geometry,reason?}
 let aktivTurId = null;
 let visTurId = null;
 let spor = [];               // peker på sporet til turen som vises
@@ -718,7 +801,8 @@ function sporSegmenter(punkter) {
   for (const p of (punkter || [])) {
     if (!Array.isArray(p) || p.length < 2) continue;
     // p[5] betyr at forbindelsen FRA forrige lagrede punkt er brutt
-    // (pause/transport/GPS-hopp). Leaflet får separate del-linjer.
+    // (pause/reboot/GPS-opphold). Aktivitetsskifter beholder en sammenhengende
+    // faktisk rute; TRANSPORT utelates bare fra coverage.
     if (p[5] && segment.length) {
       if (segment.length >= 2) segmenter.push(segment);
       segment = [];
@@ -729,9 +813,51 @@ function sporSegmenter(punkter) {
   return segmenter;
 }
 
+const SURVEY_SPOR_VISNING_MAKS = SURVEY_TRACK.DEFAULT_MAX_POINTS;
+const SURVEY_SPOR_VISNING_BATCH = 6;
+let surveySporVisning = SURVEY_TRACK.emptyView();
+
+function nullstillSurveySporVisning() {
+  surveySporVisning = SURVEY_TRACK.emptyView();
+}
+
+function byggSurveySporVisning(t) {
+  surveySporVisning = SURVEY_TRACK.build(t, SURVEY_SPOR_VISNING_MAKS);
+}
+
+function sikreSurveySporVisning(t) {
+  if (!SURVEY_TRACK.aligned(surveySporVisning, t, false)) byggSurveySporVisning(t);
+}
+
+function renderSurveySporVisning() {
+  if (typeof sporLinje === "undefined") return;
+  sporLinje.setLatLngs(SURVEY_TRACK.renderableSegments(surveySporVisning));
+  surveySporVisning.dirty = 0;
+}
+
+function leggTilSurveySporVisning(t, p, renderNow) {
+  if (!t || !Array.isArray(p) || p.length < 2 || t.id !== visTurId) return;
+  const appended = SURVEY_TRACK.append(
+    surveySporVisning, t, p, SURVEY_SPOR_VISNING_MAKS
+  );
+  surveySporVisning = appended.view;
+  if (renderNow !== false && S.track && !stille() &&
+      (appended.rebuilt || surveySporVisning.dirty >= SURVEY_SPOR_VISNING_BATCH)) {
+    renderSurveySporVisning();
+  }
+}
+
 function tegnSpor() {
   if (typeof sporLinje === "undefined") return;
-  sporLinje.setLatLngs(S.track ? sporSegmenter(spor) : []);
+  if (!S.track) { sporLinje.setLatLngs([]); return; }
+  const t = vistTur();
+  if (erSurvey(t)) {
+    sikreSurveySporVisning(t);
+    renderSurveySporVisning();
+  } else {
+    nullstillSurveySporVisning();
+    sporLinje.setLatLngs(sporSegmenter(spor));
+  }
 }
 
 function settVistTur(id, flyttKart = true) {
@@ -742,7 +868,9 @@ function settVistTur(id, flyttKart = true) {
   sisteFix = null;
   if (typeof sporLinje !== "undefined") {
     tegnSpor();
-    if (flyttKart && spor.length && sporLinje.getLatLngs().length) map.fitBounds(sporLinje.getBounds().pad(0.15), { maxZoom: 17 });
+    if (flyttKart && spor.length) {
+      map.fitBounds(L.latLngBounds(spor.map(p => [p[0], p[1]])).pad(0.15), { maxZoom: 17 });
+    }
   }
   if (typeof oppdaterHud === "function") oppdaterHud();
 }
@@ -752,17 +880,69 @@ function pakk() {
     schemaVersion: SKJEMA,
     appVersion: "3.4",
     meta: { grid: S.grid, lat0: S.lat0 },
-    S, merker, soner, bench, hull,
+    S, merker, soner, bench, hull, surveyObservasjoner, surveyUtelukkelser,
     celler: pakkCeller(),
     turer: turer.map(t => ({
       ...t,
       spor: (t.spor || []).map(p => [
         +(+p[0]).toFixed(6), +(+p[1]).toFixed(6), p[2], p[3] || undefined,
         p[4] == null ? undefined : Math.round(+p[4]), p[5] ? 1 : undefined
-      ])
+      ]),
+      // Råmålinger ligger append-only i SQLite/IndexedDB. Bare den kompakte,
+      // aksepterte avledningsrekken trengs her for rask kartgjenoppretting.
+      surveyPoints: t.kind === "survey"
+        ? (t.surveyPoints || []).map(pakkSurveyPunkt).filter(Boolean)
+        : undefined,
+      // Flyktige UI-låser skal aldri overleve prosessdød.
+      surveyTransitioning: undefined,
+      surveyFinalizing: undefined,
+      nativeStateUncertain: undefined
     })),
     aktivTurId, visTurId
   });
+}
+
+function pakkSurveyPunkt(p) {
+  if (!p || !Number.isFinite(+p.lat) || !Number.isFinite(+p.lng)) return null;
+  return [
+    +(+p.lat).toFixed(7),
+    +(+p.lng).toFixed(7),
+    Math.round(+p.timestamp || Date.now()),
+    p.accuracy == null ? null : Math.round(+p.accuracy * 10) / 10,
+    SURVEY.normalizeActivity(p.activityMode),
+    String(p.quality || SURVEY.QUALITY.ACCEPTABLE),
+    p.contributes === false ? 0 : 1,
+    Math.round(Math.max(0, +p.distanceMeters || 0) * 10) / 10,
+    p.breakBefore ? 1 : 0,
+    p.bootId == null ? null : String(p.bootId),
+    p.elapsedRealtimeNanos == null ? null : String(p.elapsedRealtimeNanos)
+  ];
+}
+
+function normaliserSurveyPunkt(p) {
+  const source = Array.isArray(p) ? {
+    lat: p[0], lng: p[1], timestamp: p[2], accuracy: p[3], activityMode: p[4],
+    quality: p[5], contributes: p[6] !== 0, distanceMeters: p[7], breakBefore: p[8] === 1,
+    bootId: p[9] == null ? null : String(p[9]),
+    elapsedRealtimeNanos: p[10] == null ? null : String(p[10])
+  } : p;
+  if (!source || !Number.isFinite(+source.lat) || !Number.isFinite(+source.lng) || source.accepted === false) return null;
+  return {
+    lat: +source.lat,
+    lng: +source.lng,
+    timestamp: Math.max(1, +source.timestamp || Date.now()),
+    accuracy: Math.max(0, +source.accuracy || 0),
+    activityMode: SURVEY.normalizeActivity(source.activityMode),
+    quality: Object.values(SURVEY.QUALITY).includes(source.quality)
+      ? source.quality : SURVEY.QUALITY.ACCEPTABLE,
+    accepted: true,
+    contributes: source.contributes !== false,
+    distanceMeters: Math.max(0, +source.distanceMeters || 0),
+    breakBefore: !!source.breakBefore,
+    bootId: source.bootId == null ? null : String(source.bootId),
+    elapsedRealtimeNanos: source.elapsedRealtimeNanos == null
+      ? null : String(source.elapsedRealtimeNanos)
+  };
 }
 
 async function skrivRaa(t) {
@@ -777,15 +957,28 @@ async function lesRaa() {
   return localStorage.getItem(NOKKEL);
 }
 
-let sisteLagring = 0, ventende = false;
-async function lagreNa() {
+let sisteLagring = 0, ventende = false, lagringsKo = Promise.resolve();
+async function lagreNaStrict() {
+  let snapshot;
   try {
-    await skrivRaa(pakk());
+    // Ta snapshot ved kalltid, men serialiser selve commit-rekkefølgen. En
+    // langsom eldre window.storage-write får dermed aldri overskrive en nyere
+    // sletting eller terminalstatus etter at denne strict-kalleren har returnert.
+    snapshot = pakk();
+    const commit = lagringsKo.then(() => skrivRaa(snapshot));
+    lagringsKo = commit.catch(() => {});
+    await commit;
     sisteLagring = Date.now();
     if (lagringVirker !== true) { lagringVirker = true; visLagringStatus(); }
-  } catch (e) {
+  } catch (error) {
     if (lagringVirker !== false) { lagringVirker = false; visLagringStatus(); }
+    throw error;
   }
+}
+async function lagreNa() {
+  try {
+    await lagreNaStrict();
+  } catch (e) { /* status oppdatert av strict-varianten */ }
 }
 function lagre() {
   const naa = Date.now();
@@ -801,16 +994,75 @@ function visLagringStatus() {
     : "Turer, undersøkt terreng, soner og merker lagres på enheten din.";
 }
 
+function normaliserSurveyEksklusjon(exclusion, surveyId, areaId) {
+  if (!exclusion || !exclusion.geometry || typeof exclusion.geometry !== "object") return null;
+  const normalizedSurveyId = surveyId == null
+    ? (exclusion.surveyId == null ? null : String(exclusion.surveyId))
+    : String(surveyId);
+  const normalizedAreaId = areaId == null
+    ? (exclusion.surveyAreaId == null ? null : String(exclusion.surveyAreaId))
+    : String(areaId);
+  return {
+    id: String(exclusion.id || ("exclude-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6))),
+    surveyId: normalizedSurveyId,
+    surveyAreaId: normalizedAreaId,
+    geometry: exclusion.geometry,
+    reason: String(exclusion.reason || "IRRELEVANT"),
+    createdAt: Math.max(0, +exclusion.createdAt || 0) || Date.now()
+  };
+}
+
 function normaliserTur(t) {
   if (!t || !t.id) return null;
   const sporInn = Array.isArray(t.spor) ? t.spor.filter(p => Array.isArray(p) && p.length >= 3) : [];
   const status = t.t1 ? "avsluttet" : (t.status === "pauset" ? "pauset" : "aktiv");
-  return {
+  const normalisert = {
     id: String(t.id), t0: +t.t0 || Date.now(), t1: t.t1 ? +t.t1 : null,
     status, distanse: Math.max(0, +t.distanse || 0), spor: sporInn,
     sesong: +t.sesong || new Date(+t.t0 || Date.now()).getFullYear(),
     pauseMs: Math.max(0, +t.pauseMs || 0), pauseStart: t.pauseStart ? +t.pauseStart : null
   };
+  if (t.kind === "survey") {
+    normalisert.kind = "survey";
+    normalisert.areaId = t.areaId == null ? null : String(t.areaId);
+    normalisert.searchRadiusMeters = Math.max(0.5, +t.searchRadiusMeters || 5);
+    normalisert.coverageProfile = String(t.coverageProfile || "THOROUGH");
+    normalisert.currentActivity = SURVEY.normalizeActivity(t.currentActivity || "SEARCHING");
+    normalisert.surveyPoints = Array.isArray(t.surveyPoints)
+      ? t.surveyPoints.map(normaliserSurveyPunkt).filter(Boolean) : [];
+    normalisert.nativeCursor = Math.max(0, +t.nativeCursor || 0);
+    normalisert.nativeLatestSequence = Math.max(0, +t.nativeLatestSequence || 0);
+    normalisert.nativeStateRevision = Math.max(0, +t.nativeStateRevision || 0);
+    normalisert.nativeSessionCreated = !!t.nativeSessionCreated;
+    normalisert.nativeSyncPending = !!t.nativeSyncPending;
+    normalisert.nativeStateUncertain = false;
+    normalisert.nativeGpsIssueCode = t.nativeGpsIssueCode == null
+      ? null : String(t.nativeGpsIssueCode);
+    normalisert.nativeGpsIssueMessage = t.nativeGpsIssueMessage == null
+      ? null : String(t.nativeGpsIssueMessage).slice(0, 240);
+    normalisert.coverageCache = t.coverageCache || null;
+    normalisert.surveyPointsBaseCount = Math.max(0, +t.surveyPointsBaseCount || 0);
+    normalisert.coverageAnchor = normaliserSurveyPunkt(t.coverageAnchor);
+    normalisert.targetGeometry = t.targetGeometry && t.targetGeometry.type === "Feature"
+      ? t.targetGeometry : null;
+    normalisert.targetName = String(t.targetName || "");
+    normalisert.targetSnapshotAt = Math.max(0, +t.targetSnapshotAt || 0) || null;
+    normalisert.targetExclusions = Array.isArray(t.targetExclusions)
+      ? t.targetExclusions.map(x => normaliserSurveyEksklusjon(x, t.id, t.areaId)).filter(Boolean)
+      : [];
+    normalisert.statistics = t.statistics || {};
+    normalisert.ignoredHoleIds = Array.isArray(t.ignoredHoleIds) ? t.ignoredHoleIds : [];
+    normalisert.rawSampleCount = Math.max(0, +t.rawSampleCount || 0);
+    normalisert.rejectedSampleCount = Math.max(0, +t.rejectedSampleCount || 0);
+    normalisert.lastQuality = Object.values(SURVEY.QUALITY).includes(t.lastQuality)
+      ? t.lastQuality : null;
+    normalisert.lastAccuracy = Number.isFinite(+t.lastAccuracy) ? Math.max(0, +t.lastAccuracy) : null;
+    normalisert.almostCompleteNotified = !!t.almostCompleteNotified;
+    normalisert.surveyBreakPending = !!t.surveyBreakPending;
+    normalisert.surveyTransitioning = false;
+    normalisert.surveyFinalizing = false;
+  }
+  return normalisert;
 }
 
 function normaliserMerke(m) {
@@ -847,9 +1099,38 @@ async function lastInn() {
     soner = d.soner || [];
     bench = d.bench || [];
     hull = d.hull || [];
+    surveyObservasjoner = Array.isArray(d.surveyObservasjoner) ? d.surveyObservasjoner : [];
+    surveyUtelukkelser = Array.isArray(d.surveyUtelukkelser)
+      ? d.surveyUtelukkelser.map(x => normaliserSurveyEksklusjon(x)).filter(Boolean)
+      : [];
     lastCeller(d.celler || {});
 
     turer = (d.turer || []).map(normaliserTur).filter(Boolean);
+    // Eldre surveyer lagret bare areaId. Ta et engangssnapshot ved migrering,
+    // slik at senere redigering eller sletting av sonen ikke endrer historikk.
+    for (const survey of turer.filter(t => t.kind === "survey" && !t.targetGeometry && t.areaId)) {
+      settSurveyMaal(survey, survey.areaId, true);
+    }
+    // Fra og med skjema 42 eier hver survey et uforanderlig snapshot av sine
+    // utelatelser. Eldre områdekoblinger kopieres én gang, slik at en senere
+    // import eller endring av samme sone ikke omskriver historiske prosenter.
+    if (Math.max(0, +d.schemaVersion || 0) < 42) {
+      for (const survey of turer.filter(t => t.kind === "survey")) {
+        const existing = new Set((survey.targetExclusions || []).map(x => x.id));
+        for (const legacy of surveyUtelukkelser) {
+          const belongsToSurvey = legacy.surveyId && String(legacy.surveyId) === String(survey.id);
+          const belongsToArea = !legacy.surveyId && survey.areaId &&
+            String(legacy.surveyAreaId || "") === String(survey.areaId);
+          if (!belongsToSurvey && !belongsToArea) continue;
+          const snapshot = normaliserSurveyEksklusjon(legacy, survey.id, survey.areaId);
+          if (snapshot && !existing.has(snapshot.id)) {
+            survey.targetExclusions.push(snapshot);
+            existing.add(snapshot.id);
+          }
+        }
+      }
+      surveyUtelukkelser = surveyUtelukkelser.filter(x => !!x.surveyId);
+    }
     // Migrer v3.1 sin ene globale gålinje til en avsluttet historisk tur.
     if (!turer.length && Array.isArray(d.spor) && d.spor.length) {
       const t0 = +(d.spor[0][2] || Date.now());
@@ -863,9 +1144,9 @@ async function lastInn() {
 
     const kandidat = turer.find(t => t.id === d.aktivTurId && !t.t1);
     aktivTurId = kandidat ? kandidat.id : null;
-    // Sikker oppstart: en tur som var aktiv da appen forsvant, åpnes pauset.
-    // Da kan ikke en omstart/reboot begynne å rydde tåke før brukeren trykker Fortsett.
-    if (kandidat && kandidat.status !== "pauset") {
+    // Legacy-turer åpnes defensivt pauset. En survey eies derimot av den native
+    // foreground-tjenesten og synkroniseres mot dens vedvarende status etterpå.
+    if (kandidat && kandidat.kind !== "survey" && kandidat.status !== "pauset") {
       kandidat.status = "pauset";
       kandidat.pauseStart = Date.now();
     } else if (kandidat && kandidat.status === "pauset" && !kandidat.pauseStart) {
@@ -979,6 +1260,12 @@ let kartlag = lagGrunnkart("topo").addTo(map);
 map.createPane("turrutePane");
 map.getPane("turrutePane").style.zIndex = 350;
 map.getPane("turrutePane").style.pointerEvents = "none";
+for (const [navn, z] of [["surveyCoveragePane", 410], ["surveyUncoveredPane", 420],
+  ["surveyTargetPane", 430], ["surveyTrackPane", 450], ["surveyAssistPane", 470]]) {
+  map.createPane(navn);
+  map.getPane(navn).style.zIndex = String(z);
+  map.getPane(navn).style.pointerEvents = navn === "surveyTargetPane" ? "auto" : "none";
+}
 const FOTRUTE_WMS = "https://wms.geonorge.no/skwms1/wms.friluftsruter2";
 const FILTER_MERKET = '<Filter xmlns="http://www.opengis.net/ogc"><PropertyIsEqualTo><PropertyName>merking_d</PropertyName><Literal>Merket</Literal></PropertyIsEqualTo></Filter>';
 const FILTER_UMERKET = '<Filter xmlns="http://www.opengis.net/ogc"><PropertyIsEqualTo><PropertyName>merking_d</PropertyName><Literal>Ikke merket</Literal></PropertyIsEqualTo></Filter>';
@@ -1136,7 +1423,7 @@ const Taake = L.Layer.extend({
 const taake = new Taake();
 map.addLayer(taake);
 
-const sporLinje = L.polyline([], { color: "#C67139", weight: 4, opacity: .92 }).addTo(map);
+const sporLinje = L.polyline([], { color: "#C67139", weight: 4, opacity: .92, pane: "surveyTrackPane" }).addTo(map);
 const posSirkel = L.marker([0, 0], {
   interactive: false,
   icon: L.divIcon({
@@ -1148,6 +1435,26 @@ const noySirkel = L.circle([0, 0], { radius: 0, color: "#C67139", weight: 1, fil
 const merkeLag = L.layerGroup().addTo(map);
 const soneLag = L.layerGroup().addTo(map);
 const soneSkisse = L.layerGroup().addTo(map);
+const surveyHistorikkLag = L.geoJSON(null, { pane: "surveyCoveragePane", style: {
+  color: "#59677A", weight: 1, fillColor: "#71829A", fillOpacity: .10, opacity: .35
+} }).addTo(map);
+const surveyDekningLag = L.geoJSON(null, { pane: "surveyCoveragePane", style: {
+  color: "#4F653A", weight: 1, fillColor: "#7A8A5E", fillOpacity: .24, opacity: .55
+} }).addTo(map);
+const surveyUsikkerLag = L.geoJSON(null, { pane: "surveyCoveragePane", style: {
+  color: "#C67139", weight: 1.5, dashArray: "4 5", fillColor: "#D9A441", fillOpacity: .15, opacity: .8
+} }).addTo(map);
+const surveyUdekketLag = L.geoJSON(null, { pane: "surveyUncoveredPane", style: {
+  color: "#9E5932", weight: 1, dashArray: "3 5", fillColor: "#C67139", fillOpacity: .07, opacity: .55
+} }).addTo(map);
+const surveyUtelattLag = L.geoJSON(null, { pane: "surveyUncoveredPane", style: {
+  color: "#5F6763", weight: 1.5, dashArray: "2 5", fillColor: "#7C8580", fillOpacity: .16, opacity: .7
+} }).addTo(map);
+const surveyMaalLag = L.geoJSON(null, { pane: "surveyTargetPane", style: {
+  color: "#3D472B", weight: 3, dashArray: "7 5", fillColor: "#A8C08A", fillOpacity: .025, opacity: .92
+} }).addTo(map);
+const surveyFunnLag = L.layerGroup([], { pane: "surveyAssistPane" }).addTo(map);
+const surveyHjelpLag = L.layerGroup([], { pane: "surveyAssistPane" }).addTo(map);
 let pulsMarkor = null;
 
 /* ============================================================
@@ -1272,7 +1579,7 @@ document.getElementById("btnBenchAvbryt").addEventListener("click", () => { avsl
 /* ============================================================
    5. Plukksoner
    ============================================================ */
-let soneModus = null; // {modus:'tegn'|'gaa', pkt:[], harSpurt:false}
+let soneModus = null; // {modus:'tegn'|'gaa'|'rediger'|'ekskluder', pkt:[], harSpurt:false, originalId?}
 
 function startSone() {
   if (soneModus) return;
@@ -1287,19 +1594,24 @@ function startSone() {
   document.getElementById("akAvbryt").onclick = lukkArk;
 }
 
-function soneIgang(modus) {
-  soneModus = { modus, pkt: [], harSpurt: false };
+function soneIgang(modus, existing) {
+  soneModus = {
+    modus, pkt: existing ? existing.pkt.map(point => point.slice()) : [], harSpurt: false,
+    originalId: existing ? existing.id : null
+  };
   document.getElementById("btnSone").classList.add("pa");
   document.getElementById("soneBar").classList.add("vis");
   document.getElementById("btnSoneAngre").style.display = modus === "tegn" ? "" : "none";
   oppdaterSoneBar();
-  melding(modus === "tegn" ? "Trykk der hjørnene skal stå" : "Gå grensa — jeg følger etter");
+  melding(modus === "tegn" ? "Trykk der hjørnene skal stå" :
+    (modus === "ekskluder" ? "Tegn delen som ikke skal undersøkes" :
+      (modus === "rediger" ? "Dra hjørnene til riktig sted" : "Gå grensa — jeg følger etter")));
 }
 
 function oppdaterSoneBar() {
   if (!soneModus) return;
   document.getElementById("soneTekst").textContent =
-    (soneModus.modus === "tegn" ? "Hjørner: " : "Grensepunkter: ") + soneModus.pkt.length;
+    (["tegn", "ekskluder"].includes(soneModus.modus) ? "Hjørner: " : (soneModus.modus === "rediger" ? "Rediger hjørner: " : "Grensepunkter: ")) + soneModus.pkt.length;
   soneSkisse.clearLayers();
   if (soneModus.pkt.length) {
     L.polyline(soneModus.pkt, { color: "#A8C08A", weight: 3, dashArray: "5 6" }).addTo(soneSkisse);
@@ -1307,6 +1619,17 @@ function oppdaterSoneBar() {
     if (soneModus.pkt.length >= 3)
       L.polyline([soneModus.pkt[soneModus.pkt.length - 1], soneModus.pkt[0]],
         { color: "#A8C08A", weight: 1.5, dashArray: "2 7", opacity: .7 }).addTo(soneSkisse);
+    if (soneModus.modus === "rediger") soneModus.pkt.forEach((point, index) => {
+      const marker = L.marker(point, {
+        draggable: true, pane: "surveyAssistPane",
+        icon: L.divIcon({ className: "", html: '<div class="survey-vertex"></div>', iconSize: [22, 22], iconAnchor: [11, 11] })
+      }).addTo(soneSkisse);
+      marker.on("dragend", event => {
+        const latlng = event.target.getLatLng();
+        soneModus.pkt[index] = [latlng.lat, latlng.lng];
+        oppdaterSoneBar();
+      });
+    });
   }
 }
 
@@ -1314,7 +1637,7 @@ function soneLeggTil(lat, lng) {
   const pkt = soneModus.pkt;
   // autolukk: nær startpunktet etter å ha vært unna
   if (pkt.length >= 3 && map.distance([lat, lng], pkt[0]) < 20) {
-    if (soneModus.modus === "tegn") { ferdigSone(); return; }
+    if (["tegn", "ekskluder"].includes(soneModus.modus)) { ferdigSone(); return; }
     if (!soneModus.harSpurt && soneVeiLengde() > 60) {
       soneModus.harSpurt = true;
       visArk(`<h4>Du er ved startpunktet</h4>
@@ -1345,6 +1668,42 @@ function ferdigSone() {
   // lukkes automatisk med rett strek fra siste til første; forenkle sikksakk
   const pkt = forenkle(soneModus.pkt, soneModus.modus === "gaa" ? 4 : 1);
   if (pkt.length < 3) { melding("Sonen ble for liten"); return; }
+  const validGeometry = SURVEY.polygonFromLatLngs(window.turf, pkt);
+  if (!validGeometry || (window.turf.booleanValid && !window.turf.booleanValid(validGeometry)) ||
+      (window.turf.kinks && window.turf.kinks(validGeometry).features.length)) {
+    melding("Polygonet krysser seg selv — flytt eller angre et hjørne", 4200);
+    return;
+  }
+  if (soneModus.modus === "rediger") {
+    const existing = soner.find(area => String(area.id) === String(soneModus.originalId));
+    if (!existing) { avbrytSone(true); melding("Fant ikke området lenger"); return; }
+    existing.pkt = pkt;
+    avbrytSone(true); lagreNa(); tegnSoner();
+    melding("Området er oppdatert");
+    return;
+  }
+  if (soneModus.modus === "ekskluder") {
+    const active = aktivSurvey();
+    if (!active || !surveyOmradeGeoJson(active)) { avbrytSone(true); melding("Velg et målområde først"); return; }
+    const geometry = validGeometry;
+    avbrytSone(true);
+    visArk(`<h4>Hvorfor utelates området?</h4><div class="valg">
+      <button data-exclusion-reason="INACCESSIBLE">Utilgjengelig<small>Myr, vann, stup eller tett kratt</small></button>
+      <button data-exclusion-reason="IRRELEVANT">Ikke relevant<small>Privat tomt eller terreng uten lyng</small></button>
+      </div><div class="to ark-avbryt"><button id="akAvbryt">Avbryt</button></div>`);
+    document.querySelectorAll("[data-exclusion-reason]").forEach(button => {
+      button.onclick = async () => {
+        leggTilSurveyEksklusjon(active, {
+          id: "exclude-" + Date.now().toString(36), surveyId: active.id, surveyAreaId: active.areaId,
+          geometry, reason: button.dataset.exclusionReason, createdAt: Date.now()
+        });
+        lukkArk(); await beregnSurveyAvledet(active, false); await lagreNa();
+        melding("Området er tatt ut av survey-målet");
+      };
+    });
+    document.getElementById("akAvbryt").onclick = lukkArk;
+    return;
+  }
   avbrytSone(true);
   visArk(`<h4>Navn på sonen</h4>
     <input id="akNavn" type="text" value="Sone ${soner.length + 1}">
@@ -1371,6 +1730,11 @@ function avbrytSone(stille) {
 }
 
 document.getElementById("btnSone").addEventListener("click", () => soneModus ? ferdigSone() : startSone());
+document.getElementById("btnEkskluder").addEventListener("click", () => {
+  const active = aktivSurvey();
+  if (!active || !surveyOmradeGeoJson(active)) { visSurveyOmradevalg(); return; }
+  lukkMenyer(); soneIgang("ekskluder");
+});
 document.getElementById("btnSoneFerdig").addEventListener("click", ferdigSone);
 document.getElementById("btnSoneAvbryt").addEventListener("click", () => avbrytSone(false));
 document.getElementById("btnSoneAngre").addEventListener("click", () => {
@@ -1469,6 +1833,7 @@ function sonePopupHtml(s) {
     I år: ${fmt1(st.literIAar)} l · Totalt: ${fmt1(st.literTot)} l<br>${maal}</div>
     <div class="pop-knapper">
       <button id="su-${s.id}">Nærmeste udekte</button>
+      <button id="se-${s.id}">Rediger</button>
       <button id="sn-${s.id}">Nytt navn</button>
       <button id="sd-${s.id}" class="slett">Slett</button>
     </div>`;
@@ -1476,6 +1841,7 @@ function sonePopupHtml(s) {
 
 function kobleSonePopup(s) {
   const ud = document.getElementById("su-" + s.id);
+  const ed = document.getElementById("se-" + s.id);
   const nn = document.getElementById("sn-" + s.id);
   const sl = document.getElementById("sd-" + s.id);
   if (ud) ud.onclick = () => {
@@ -1488,6 +1854,7 @@ function kobleSonePopup(s) {
     const fra = posisjon || map.getCenter();
     melding(`Udekt område ${Math.round(t.d)} m ${HIMMEL[Math.round(peiling(fra, t.latlng) / 45) % 8]}`, 3500);
   };
+  if (ed) ed.onclick = () => { map.closePopup(); soneIgang("rediger", s); };
   if (nn) nn.onclick = () => {
     map.closePopup();
     visArk(`<h4>Nytt navn</h4>
@@ -1500,10 +1867,20 @@ function kobleSonePopup(s) {
       lukkArk(); lagreNa(); tegnSoner();
     };
   };
-  if (sl) sl.onclick = () => {
+  if (sl) sl.onclick = async () => {
     if (!confirm(`Slette sonen «${s.navn}»? Tåke og merker beholdes.`)) return;
+    // Sikre snapshot for data fra eldre versjoner før originalsonen fjernes.
+    for (const survey of turer.filter(erSurvey)) {
+      if (!survey.targetGeometry && String(survey.areaId || "") === String(s.id)) {
+        survey.targetGeometry = SURVEY.polygonFromLatLngs(window.turf, s.pkt, { id: s.id, name: s.navn });
+        survey.targetName = String(s.navn || "");
+        survey.targetSnapshotAt = Date.now();
+      }
+    }
     soner = soner.filter(x => x.id !== s.id);
-    map.closePopup(); lagreNa(); tegnSoner(); oppdaterHud();
+    const active = aktivSurvey();
+    if (active) await beregnSurveyAvledet(active, false);
+    map.closePopup(); await lagreNa(); tegnSoner(); oppdaterHud();
   };
 }
 
@@ -1725,6 +2102,8 @@ function settSporModus(modus, varsle = true) {
 }
 
 function startTur(modus = "auto") {
+  if (surveyLifecycleDestructive) { melding("En survey-sletting pågår …"); return; }
+  if (surveyNativeRecoveryRunning) { melding("Avstemmer bakgrunnssporingen …"); return; }
   if (aktivTur()) return;
   if (!MANUELLE_MODUSER.includes(modus)) modus = "auto";
   const naa = Date.now();
@@ -1744,6 +2123,8 @@ function startTur(modus = "auto") {
   document.getElementById("etSekk").textContent = "til sekken";
   sporLinje.setStyle({ color: "#C67139", weight: 4 });
   sporLinje.setLatLngs([]);
+  surveyHjelpLag.clearLayers();
+  tegnSurveyLag(null);
   nullstillAktivitetsfilter();
   fyllAar();
   document.getElementById("setYear").value = String(t.sesong);
@@ -1752,11 +2133,277 @@ function startTur(modus = "auto") {
   melding(modus === "auto" ? "Tur startet — Auto vurderer aktiviteten" : `Tur startet — ${SPOR_NAVN[modus]}`, 3200);
 }
 
-function pauseEllerFortsettTur() {
+function surveyNativeOptions(t) {
+  return {
+    surveyId: t.id, sessionType: "survey", startedAt: t.t0,
+    activityMode: t.currentActivity, searchRadiusMeters: t.searchRadiusMeters,
+    intervalMs: SURVEY.DEFAULT_CONFIG.tracking.intervalMs,
+    minimumDistanceMeters: SURVEY.DEFAULT_CONFIG.tracking.minimumDistanceMeters,
+    goodAccuracyMeters: SURVEY.DEFAULT_CONFIG.quality.goodMaxAccuracyMeters,
+    acceptableAccuracyMeters: SURVEY.DEFAULT_CONFIG.quality.acceptableMaxAccuracyMeters,
+    poorAccuracyMeters: SURVEY.DEFAULT_CONFIG.quality.poorMaxAccuracyMeters,
+    maxOnFootSpeedMetersPerSecond: SURVEY.DEFAULT_CONFIG.quality.maxWalkingSpeedMetersPerSecond,
+    maxTransportSpeedMetersPerSecond: SURVEY.DEFAULT_CONFIG.quality.maxTransportSpeedMetersPerSecond
+  };
+}
+
+function nativeSurveyState(response) {
+  if (!response || typeof response !== "object") return null;
+  if (Object.prototype.hasOwnProperty.call(response, "state")) return response.state || null;
+  if (Object.prototype.hasOwnProperty.call(response, "session")) return response.session || null;
+  return response.sessionId || response.surveyId || response.status ? response : null;
+}
+
+function nativeSurveyRevision(state) {
+  if (!state || state.stateRevision == null) return null;
+  const revision = +state.stateRevision;
+  return Number.isFinite(revision) && revision >= 0 ? Math.floor(revision) : null;
+}
+
+function oppdaterSurveyNativeRevision(t, state) {
+  if (!t) return;
+  const revision = nativeSurveyRevision(state);
+  if (revision != null) {
+    t.nativeStateRevision = Math.max(0, +t.nativeStateRevision || 0, revision);
+  }
+}
+
+function avstemSurveyPauseFraNative(t, state) {
+  if (!t || !state) return;
+  oppdaterSurveyNativeRevision(t, state);
+  t.nativeStateUncertain = false;
+  const nativeStartedAt = +state.startedAt;
+  if (Number.isFinite(nativeStartedAt) && nativeStartedAt > 0) {
+    t.t0 = nativeStartedAt;
+    t.sesong = new Date(nativeStartedAt).getFullYear();
+  }
+  const status = String(state.status || "").toUpperCase();
+  const nativePauseMs = +state.pauseMs;
+  const hasNativePauseMs = Number.isFinite(nativePauseMs) && nativePauseMs >= 0;
+  if (hasNativePauseMs) t.pauseMs = nativePauseMs;
+  if (status === "PAUSED") {
+    const pausedAt = +state.pausedAt;
+    const fallback = +state.updatedAt;
+    t.pauseStart = Number.isFinite(pausedAt) && pausedAt > 0
+      ? pausedAt
+      : (t.pauseStart || (Number.isFinite(fallback) && fallback > 0 ? fallback : Date.now()));
+  } else if (status === "ACTIVE" || status === "COMPLETED") {
+    // Nye native builds leverer akkumulert pauseMs. Fallbacken under holder
+    // data fra eldre builds rimelig uten å kunne gjenskape tapt overgangstid.
+    if (!hasNativePauseMs && t.pauseStart) {
+      const fallbackResumeAt = Math.min(Date.now(), Math.max(t.pauseStart, +state.updatedAt || Date.now()));
+      t.pauseMs = Math.max(0, +t.pauseMs || 0) + Math.max(0, fallbackResumeAt - t.pauseStart);
+    }
+    t.pauseStart = null;
+  }
+  if (status === "ACTIVE" || status === "PAUSED") {
+    oppdaterSurveyGpsFraNativeState(t, state);
+  }
+}
+
+function markerSurveyNativeUsikker(t, event) {
+  if (!t) return;
+  t.nativeStateUncertain = true;
+  t.nativeSyncPending = true;
+  surveyLog(event || "NATIVE_STATE_UNCERTAIN", { surveyId: t.id });
+  planleggSurveyRecoveryRetry();
+}
+
+function markerSurveyNativeMangler(t) {
+  if (!t) return;
+  const statusChanged = t.status !== "pauset";
+  t.nativeSessionCreated = false;
+  t.nativeLatestSequence = 0;
+  t.nativeStateRevision = 0;
+  // En eventuell ny native rad begynner sekvensen på 1. En gammel cursor
+  // ville ellers hoppe over de første punktene i den reparerte økten.
+  t.nativeCursor = 0;
+  t.nativeSyncPending = false;
+  t.nativeStateUncertain = false;
+  t.nativeGpsIssueCode = "NATIVE_SESSION_MISSING";
+  t.nativeGpsIssueMessage = "Bakgrunnsøkten finnes ikke";
+  t.status = "pauset";
+  t.pauseStart = t.pauseStart || Date.now();
+  t.surveyBreakPending = true;
+  if (statusChanged) surveyOverlapVindu = [];
+}
+
+async function anvendSurveyNativeState(t, state) {
+  if (!t) return "MISSING";
+  if (!state) {
+    markerSurveyNativeMangler(t);
+    return "MISSING";
+  }
+  const revision = nativeSurveyRevision(state);
+  if (revision != null && revision < Math.max(0, +t.nativeStateRevision || 0)) {
+    surveyLog("NATIVE_STATE_STALE", { surveyId: t.id, revision, currentRevision: t.nativeStateRevision });
+    return "STALE";
+  }
+  oppdaterSurveyNativeRevision(t, state);
+  const status = String(state.status || "").toUpperCase();
+  const previousStatus = t.status;
+  t.nativeSessionCreated = true;
+  t.nativeLatestSequence = Math.max(0, +(state.latestSequence || 0), +(t.nativeLatestSequence || 0));
+  if ((+t.nativeCursor || 0) < t.nativeLatestSequence) t.nativeSyncPending = true;
+  t.nativeStateUncertain = false;
+  if (status === "COMPLETED") {
+    await fullforGjenopprettetSurvey(t, state);
+    return status;
+  }
+  if (status !== "ACTIVE" && status !== "PAUSED") {
+    throw new Error(`Ukjent native survey-status: ${status || "tom"}`);
+  }
+  t.status = status === "ACTIVE" ? "aktiv" : "pauset";
+  avstemSurveyPauseFraNative(t, state);
+  if (state.activity != null || state.activityMode != null) {
+    t.currentActivity = SURVEY.normalizeActivity(state.activity || state.activityMode);
+    if (t.id === aktivTurId) S.sporModus = surveyModusTilSpor(t.currentActivity);
+  }
+  if (previousStatus !== t.status) {
+    t.surveyBreakPending = true;
+    surveyOverlapVindu = [];
+  }
+  return status;
+}
+
+async function avstemSurveyEtterTvetydigNativeSvar(t, event) {
+  try {
+    const state = nativeSurveyState(await surveyStore.getState({ surveyId: t.id }));
+    const status = await anvendSurveyNativeState(t, state);
+    await lagreNa();
+    return { known: true, state, status };
+  } catch (readError) {
+    markerSurveyNativeUsikker(t, event || "NATIVE_TRANSITION_UNCERTAIN");
+    await lagreNa();
+    return { known: false, state: null, status: "UNKNOWN" };
+  }
+}
+
+async function startEllerGjenopptaSurveyNative(t) {
+  const response = await surveyStore.getState({ surveyId: t.id });
+  const state = nativeSurveyState(response);
+  const status = String((state && state.status) || "").toUpperCase();
+  if (state && status === "ACTIVE") {
+    const refreshed = await surveyStore.resume({ surveyId: t.id });
+    t.nativeSessionCreated = true;
+    return nativeSurveyState(refreshed) || refreshed || state;
+  }
+  if (state && status === "PAUSED") {
+    await stoppNativ();
+    const resumed = await surveyStore.resume(surveyNativeOptions(t));
+    t.nativeSessionCreated = true;
+    return nativeSurveyState(resumed) || resumed;
+  }
+  if (state) throw new Error(`Native survey er i terminal tilstand ${status || "UKJENT"}`);
+  await stoppNativ();
+  const started = await surveyStore.start(surveyNativeOptions(t));
+  t.nativeSessionCreated = true;
+  return nativeSurveyState(started) || started;
+}
+
+async function pauseEllerFortsettTur() {
   const t = aktivTur();
-  if (!t) { visModusvalg(true); return; }
+  if (surveyLifecycleDestructive) { melding("En survey-sletting pågår …"); return; }
+  if (!t) { visStartvalg(); return; }
+  if (surveyNativeRecoveryRunning) { melding("Avstemmer bakgrunnssporingen …"); return; }
   aktiverKompass();
   if (benchAktiv) { melding("Avslutt målingen før du pauser turen"); return; }
+  if (erSurvey(t)) {
+    if (t.surveyTransitioning || t.surveyFinalizing) { melding("Venter på bakgrunnssporingen …"); return; }
+    const wasActive = t.status === "aktiv";
+    t.surveyTransitioning = true;
+    surveyNativeTransitionGeneration++;
+    oppdaterTurUI(); oppdaterSurveyDashboard();
+    try {
+      if (wasActive) {
+        let pausedState = null;
+        if (surveyStore.kind === "native-sqlite") {
+          try {
+            pausedState = await surveyStore.pause({ surveyId: t.id });
+            pausedState = nativeSurveyState(pausedState) || pausedState;
+            t.nativeSessionCreated = true;
+            t.nativeLatestSequence = Math.max(0, +(pausedState && pausedState.latestSequence) || 0);
+          } catch (error) {
+            const reconciled = await avstemSurveyEtterTvetydigNativeSvar(t, "PAUSE_STATE_UNCERTAIN");
+            if (!reconciled.known) {
+              melding("Kunne ikke bekrefte om bakgrunnssporingen ble pauset", 4800);
+              return;
+            }
+            if (reconciled.status === "COMPLETED" || reconciled.status === "MISSING") {
+              melding(reconciled.status === "COMPLETED"
+                ? "Undersøkelsen var allerede avsluttet"
+                : "Bakgrunnsøkten mangler — undersøkelsen er satt på pause", 4800);
+              return;
+            }
+            if (reconciled.status !== "PAUSED") {
+              melding("Kunne ikke pause bakgrunnssporingen — undersøkelsen fortsetter", 4800);
+              return;
+            }
+            pausedState = reconciled.state;
+          }
+          try {
+            await synkSurveyHelt(t, t.nativeLatestSequence);
+          } catch (error) {
+            // Native status er allerede PAUSED. Lokal state må følge den sikre
+            // statusen selv om den siste avledningen må tas ved neste åpning.
+            t.nativeSyncPending = true;
+          }
+        } else {
+          await surveySampleQueue;
+        }
+        t.status = "pauset";
+        if (surveyStore.kind === "native-sqlite") avstemSurveyPauseFraNative(t, pausedState);
+        else t.pauseStart = Date.now();
+        t.surveyBreakPending = true;
+        surveyOverlapVindu = [];
+        await beregnSurveyAvledet(t, true);
+        if (t.id === visTurId) tegnSpor();
+        surveyLog("SURVEY_PAUSED", { surveyId: t.id });
+        melding(t.nativeSyncPending
+          ? "Undersøkelsen er pauset — siste punkter synkroniseres senere"
+          : "Undersøkelsen er pauset — ingen dekning registreres");
+      } else {
+        let resumedState = null;
+        if (surveyStore.kind === "native-sqlite") {
+          try {
+            resumedState = await startEllerGjenopptaSurveyNative(t);
+          } catch (error) {
+            const reconciled = await avstemSurveyEtterTvetydigNativeSvar(t, "RESUME_STATE_UNCERTAIN");
+            if (!reconciled.known) {
+              melding("Kunne ikke bekrefte om bakgrunnssporingen startet", 4800);
+              return;
+            }
+            if (reconciled.status === "ACTIVE") resumedState = reconciled.state;
+            else {
+              melding(reconciled.status === "COMPLETED"
+                ? "Undersøkelsen var allerede avsluttet"
+                : "Kunne ikke starte bakgrunnssporingen — undersøkelsen er fortsatt pauset", 4800);
+              return;
+            }
+          }
+        }
+        if (surveyStore.kind === "native-sqlite") avstemSurveyPauseFraNative(t, resumedState);
+        else {
+          const naa = Date.now();
+          if (t.pauseStart) t.pauseMs = Math.max(0, +t.pauseMs || 0) + Math.max(0, naa - t.pauseStart);
+          t.pauseStart = null;
+        }
+        t.status = "aktiv";
+        t.surveyBreakPending = true;
+        surveyOverlapVindu = [];
+        settVistTur(t.id, false);
+        surveyLog("SURVEY_RESUMED", { surveyId: t.id });
+        melding("Undersøkelsen fortsetter");
+      }
+      nullstillAktivitetsfilter();
+    } catch (error) {
+      melding("Kunne ikke starte bakgrunnssporingen — undersøkelsen er fortsatt pauset", 4800);
+    } finally {
+      t.surveyTransitioning = false;
+      oppdaterTurUI(); oppdaterSurveyDashboard(); await lagreNa();
+    }
+    return;
+  }
   if (t.status === "aktiv") {
     t.status = "pauset";
     t.pauseStart = Date.now();
@@ -1771,19 +2418,105 @@ function pauseEllerFortsettTur() {
     nullstillAktivitetsfilter();
     melding("Turen fortsetter");
   }
-  oppdaterTurUI(); lagreNa();
+  oppdaterTurUI(); oppdaterSurveyDashboard(); lagreNa();
 }
 
-function avsluttTur() {
+async function avsluttTur() {
   const t = aktivTur();
   if (!t) return;
+  if (surveyLifecycleDestructive) { melding("En survey-sletting pågår …"); return; }
+  if (surveyNativeRecoveryRunning) { melding("Avstemmer bakgrunnssporingen …"); return; }
   if (benchAktiv) { melding("Avslutt målingen først"); return; }
-  if (!confirm(`Avslutte turen?\n\n${fmtVarighet(turVarighet(t))} · ${fmt1(t.distanse / 1000)} km`)) return;
-  const naa = Date.now();
-  if (t.pauseStart) t.pauseMs = Math.max(0, +t.pauseMs || 0) + Math.max(0, naa - t.pauseStart);
-  t.pauseStart = null;
-  t.t1 = naa;
-  t.status = "avsluttet";
+  if (erSurvey(t) && (t.surveyTransitioning || t.surveyFinalizing)) {
+    melding("Venter på bakgrunnssporingen …"); return;
+  }
+  if (!confirm(`${erSurvey(t) ? "Fullføre undersøkelsen" : "Avslutte turen"}?\n\n${fmtVarighet(turVarighet(t))} · ${fmt1(t.distanse / 1000)} km`)) return;
+  let nativeCompleted = false;
+  let nativeCompletionState = null;
+  if (erSurvey(t)) {
+    t.surveyFinalizing = true;
+    surveyNativeTransitionGeneration++;
+    oppdaterTurUI(); oppdaterSurveyDashboard();
+    try {
+      if (surveyStore.kind === "native-sqlite") {
+        let stopped;
+        // Gjør krasjvinduet mellom terminal native commit og lokal sluttstatus
+        // gjenopprettbart før stop-kommandoen sendes.
+        t.nativeSyncPending = true;
+        await lagreNa();
+        try {
+          stopped = await surveyStore.stop({ surveyId: t.id, endedAt: Date.now() });
+          stopped = nativeSurveyState(stopped) || stopped;
+          nativeCompleted = true;
+        } catch (stopError) {
+          let response = null;
+          let stateReadSucceeded = false;
+          try {
+            response = await surveyStore.getState({ surveyId: t.id });
+            stateReadSucceeded = true;
+          } catch (readError) { /* det opprinnelige stop-avviket er autoritativt */ }
+          const state = nativeSurveyState(response);
+          if (String((state && state.status) || "").toUpperCase() === "COMPLETED") {
+            stopped = state;
+            nativeCompleted = true;
+          } else if (stateReadSucceeded && !state && !t.nativeSessionCreated) {
+            // Tillat å avslutte en lokalt opprettet, men tillatelsesnektet survey.
+            stopped = null;
+            nativeCompleted = true;
+          } else throw stopError;
+        }
+        if (stopped) {
+          nativeCompletionState = stopped;
+          t.nativeSessionCreated = true;
+          t.nativeLatestSequence = Math.max(0, +stopped.latestSequence || +t.nativeLatestSequence || 0);
+          avstemSurveyPauseFraNative(t, stopped);
+          try {
+            await synkSurveyHelt(t, t.nativeLatestSequence);
+          } catch (syncError) {
+            // Rådata er fortsatt i SQLite og tas inn ved neste åpning.
+            t.nativeSyncPending = true;
+            surveyLog("FINAL_SYNC_DEFERRED", { surveyId: t.id, latestSequence: t.nativeLatestSequence });
+          }
+        } else {
+          t.nativeSessionCreated = false;
+          t.nativeSyncPending = false;
+        }
+      } else {
+        await surveySampleQueue;
+      }
+    } catch (error) {
+      t.surveyFinalizing = false;
+      oppdaterTurUI(); oppdaterSurveyDashboard();
+      await lagreNa();
+      melding("Kunne ikke fullføre bakgrunnssporingen — undersøkelsen fortsetter", 4800);
+      return;
+    } finally {
+      if (nativeCompleted && nativ) startNativ();
+    }
+    const nativeEndedAt = nativeCompletionState && +nativeCompletionState.endedAt;
+    const terminalAt = Number.isFinite(nativeEndedAt) && nativeEndedAt > 0 ? nativeEndedAt : Date.now();
+    if (!nativeCompletionState && t.pauseStart) {
+      t.pauseMs = Math.max(0, +t.pauseMs || 0) + Math.max(0, terminalAt - t.pauseStart);
+    }
+    // Lokal terminalstatus må aldri avhenge av at en best-effort GIS-render
+    // lykkes etter at native COMPLETED allerede er varig committet.
+    t.pauseStart = null;
+    t.t1 = terminalAt;
+    t.status = "avsluttet";
+    t.surveyStatus = "COMPLETED";
+    t.surveyFinalizing = false;
+    surveyLog("SURVEY_COMPLETED", { surveyId: t.id, distanceMeters: Math.round(t.distanse || 0) });
+    try { await beregnSurveyAvledet(t, true); }
+    catch (geometryError) {
+      surveyLog("FINAL_DERIVED_FAILED", { surveyId: t.id, message: String(geometryError && geometryError.message || geometryError) });
+    }
+  } else {
+    const naa = Date.now();
+    if (t.pauseStart) t.pauseMs = Math.max(0, +t.pauseMs || 0) + Math.max(0, naa - t.pauseStart);
+    t.pauseStart = null;
+    t.t1 = naa;
+    t.status = "avsluttet";
+  }
   aktivTurId = null;
   visTurId = t.id;
   spor = t.spor;
@@ -1792,8 +2525,13 @@ function avsluttTur() {
   retur = false;
   document.getElementById("etSekk").textContent = "til sekken";
   sporLinje.setStyle({ color: "#C67139", weight: 4 });
-  oppdaterTurUI(); oppdaterHud(); fyllLister(); lagreNa();
-  melding("Tur avsluttet");
+  tegnSpor();
+  oppdaterTurUI(); oppdaterSurveyDashboard(); oppdaterHud(); fyllLister(); await lagreNa();
+  melding(erSurvey(t)
+    ? (t.nativeSyncPending
+      ? "Undersøkelsen er fullført — siste bakgrunnspunkter synkroniseres ved neste åpning"
+      : "Undersøkelsen er fullført")
+    : "Tur avsluttet");
 }
 
 function registrerGpsVindu(lat, lng, t, acc) {
@@ -1882,12 +2620,16 @@ function oppdaterTurUI() {
   const tid = document.getElementById("vTid");
   const pille = document.getElementById("statPille");
   const bm = document.getElementById("btnBench");
+  const exclusionButton = document.getElementById("btnEkskluder");
   bm.textContent = benchAktiv ? "Fullfør måling" : "Start måling";
   if (!t) {
+    exclusionButton.style.display = "none";
     tid.textContent = "—";
-    btn.textContent = "Start tur";
+    btn.textContent = "Start";
     btn.classList.add("primar");
     slutt.style.display = "none";
+    btn.disabled = false;
+    slutt.disabled = false;
     akt.disabled = true;
     verdi.textContent = "—";
     akt.dataset.tilstand = "ukjent";
@@ -1895,10 +2637,25 @@ function oppdaterTurUI() {
     return;
   }
   btn.classList.remove("primar");
+  exclusionButton.style.display = erSurvey(t) && surveyOmradeGeoJson(t) ? "" : "none";
   slutt.style.display = "";
   tid.textContent = fmtKort(turVarighet(t));
-  akt.disabled = !!benchAktiv;
-  btn.textContent = t.status === "pauset" ? "Fortsett turen" : "Pause turen";
+  const surveyBusy = erSurvey(t) && (t.surveyTransitioning || t.surveyFinalizing);
+  akt.disabled = !!benchAktiv || !!surveyBusy || (erSurvey(t) && t.status !== "aktiv");
+  btn.disabled = !!surveyBusy;
+  slutt.disabled = !!surveyBusy;
+  btn.textContent = t.status === "pauset"
+    ? (erSurvey(t) ? "Fortsett undersøkelsen" : "Fortsett turen")
+    : (erSurvey(t) ? "Pause undersøkelsen" : "Pause turen");
+  slutt.textContent = erSurvey(t) ? "Fullfør undersøkelsen" : "Avslutt turen";
+  if (erSurvey(t)) {
+    const surveyVis = t.status === "pauset" ? "pause" : surveyModusTilSpor(t.currentActivity);
+    akt.dataset.tilstand = surveyVis;
+    pille.dataset.tilstand = surveyVis;
+    verdi.textContent = surveyAktivitetsnavn(t.currentActivity);
+    oppdaterSurveyDashboard();
+    return;
+  }
   const vis = t.status === "pauset" ? "pause" : sporTilstand;
   akt.dataset.tilstand = vis;
   pille.dataset.tilstand = vis;
@@ -1907,7 +2664,7 @@ function oppdaterTurUI() {
     : SPOR_NAVN[S.sporModus] || S.sporModus;
 }
 
-function byttSporModus() { visModusvalg(false); }
+function byttSporModus() { erSurvey(aktivTur()) ? visSurveyAktivitet() : visModusvalg(false); }
 
 document.getElementById("btnTur").addEventListener("click", pauseEllerFortsettTur);
 document.getElementById("btnTurSlutt").addEventListener("click", avsluttTur);
@@ -1915,12 +2672,1685 @@ document.getElementById("btnAktivitet").addEventListener("click", byttSporModus)
 setInterval(oppdaterTurUI, 1000);
 
 /* ============================================================
-   7. GPS
+   7. Survey / Undersøk område
+   ============================================================ */
+const surveyStore = SURVEY_STORE.createSurveyStore({ capacitor: window.Capacitor });
+
+function lagSurveyGeometriExecutor() {
+  if (typeof Worker !== "function") return null;
+  let worker;
+  try { worker = new Worker("survey-geometry-worker.js"); }
+  catch (error) { return null; }
+  let requestSequence = 0;
+  let disabled = false;
+  let activeRequest = null;
+  const queue = [];
+  const stop = error => {
+    if (disabled) return;
+    disabled = true;
+    try { worker.terminate(); } catch (ignored) { /* best effort */ }
+    const requests = (activeRequest ? [activeRequest] : []).concat(queue.splice(0));
+    activeRequest = null;
+    for (const request of requests) {
+      if (request.timer) clearTimeout(request.timer);
+      request.reject(error);
+    }
+  };
+  const dispatchNext = () => {
+    if (disabled || activeRequest || !queue.length) return;
+    const request = queue.shift();
+    request.requestId = `survey-geometry-${Date.now().toString(36)}-${++requestSequence}`;
+    activeRequest = request;
+    // Worker-en behandler én Turf-jobb om gangen. Timeout starter først når
+    // jobben faktisk postes, aldri mens den venter bak en annen tung union.
+    request.timer = setTimeout(
+      () => stop(new Error("Geometri-worker brukte for lang tid")),
+      SURVEY.DEFAULT_CONFIG.coverage.workerTimeoutMs || 15000
+    );
+    try { worker.postMessage({ requestId: request.requestId, ...request.job }); }
+    catch (error) {
+      clearTimeout(request.timer);
+      activeRequest = null;
+      request.reject(error);
+      dispatchNext();
+    }
+  };
+  worker.onmessage = event => {
+    const message = event && event.data || {};
+    const request = activeRequest;
+    if (!request || String(message.requestId) !== String(request.requestId)) {
+      stop(new Error("Geometri-worker returnerte svar i feil rekkefølge"));
+      return;
+    }
+    activeRequest = null;
+    clearTimeout(request.timer);
+    if (message.ok) request.resolve(message.result);
+    else {
+      const error = new Error(String(message.error && message.error.message || "Geometri-worker feilet"));
+      error.name = String(message.error && message.error.name || "SurveyWorkerGeometryError");
+      // En gyldig worker svarte med en Turf-/inputfeil. Dette er noe annet enn
+      // transportkrasj: samme ugyldige mål skal ikke kjøres én gang til på UI.
+      error.surveyWorkerComputationError = true;
+      request.reject(error);
+    }
+    dispatchNext();
+  };
+  worker.onerror = event => {
+    if (event && typeof event.preventDefault === "function") event.preventDefault();
+    stop(new Error(String(event && event.message || "Geometri-worker stoppet")));
+  };
+  worker.onmessageerror = () => stop(new Error("Geometri-worker returnerte ugyldige data"));
+  return job => {
+    if (disabled) return Promise.reject(new Error("Geometri-worker er ikke tilgjengelig"));
+    return new Promise((resolve, reject) => {
+      queue.push({ job, resolve, reject, requestId: null, timer: null });
+      dispatchNext();
+    });
+  };
+}
+
+const surveyGeometryExecutor = lagSurveyGeometriExecutor();
+let surveyGeometryFallbackLogged = false;
+let surveyGeometryMode = surveyGeometryExecutor ? "worker" : "main-thread";
+const surveyFilter = new SURVEY.LocationQualityFilter();
+let surveyEngine = null, surveyEngineId = null, surveyPreviousAccepted = null;
+const surveyEngineEpochs = new Map();
+let surveySampleQueue = Promise.resolve(), surveySyncing = false;
+let surveySyncPromise = Promise.resolve(true), surveySyncTargetId = null, surveyDerivedTimer = null;
+let surveyVisibilitySyncPromise = Promise.resolve();
+let surveyRecoveryRetryTimer = null, surveyRecoveryRetryAttempts = 0;
+let surveyRecoveryPromise = Promise.resolve(), surveyLifecycleDestructive = false;
+let surveyNativeTransitionGeneration = 0;
+let surveyNativeRecoveryRunning = false;
+const surveyDerivedJobs = new Map();
+const surveySyncBlockedIds = new Set();
+let surveyHoleCandidates = [], surveyHoleIndex = -1, surveySistVarslet = 0;
+let surveyPoorSince = null, surveyPoorVarslet = false, surveyOverlapVindu = [];
+
+function surveyLog(event, details) {
+  const safe = Object.assign({ event, at: Date.now() }, details || {});
+  delete safe.geometry; delete safe.coverage;
+  console.info("[LyngSurvey]", JSON.stringify(safe));
+}
+function emitSurveyEvent(type, detail) {
+  surveyLog(type, detail);
+  document.dispatchEvent(new CustomEvent("lyng:survey-event", { detail: { type, ...(detail || {}) } }));
+}
+
+function erSurvey(t) { return !!(t && t.kind === "survey"); }
+function aktivSurvey() { const t = aktivTur(); return erSurvey(t) ? t : null; }
+function surveyOmrade(t) { return t && t.areaId ? soner.find(s => String(s.id) === String(t.areaId)) || null : null; }
+function settSurveyMaal(t, areaId, preserveExclusions) {
+  if (!erSurvey(t)) return;
+  if (!preserveExclusions) {
+    t.targetExclusions = [];
+    t.ignoredHoleIds = [];
+    surveyUtelukkelser = surveyUtelukkelser.filter(x => String(x.surveyId || "") !== String(t.id));
+  }
+  t.areaId = areaId == null || areaId === "" ? null : String(areaId);
+  const area = surveyOmrade(t);
+  t.targetGeometry = area
+    ? SURVEY.polygonFromLatLngs(window.turf, area.pkt, { id: area.id, name: area.navn })
+    : null;
+  t.targetName = area ? String(area.navn || "") : "";
+  t.targetSnapshotAt = Date.now();
+}
+function surveyOmradeGeoJson(t) {
+  if (t && t.targetGeometry && t.targetGeometry.type === "Feature") return t.targetGeometry;
+  const area = surveyOmrade(t);
+  return area ? SURVEY.polygonFromLatLngs(window.turf, area.pkt, { id: area.id, name: area.navn }) : null;
+}
+function surveyEksklusjoner(t) {
+  if (!t) return [];
+  return Array.isArray(t.targetExclusions) ? t.targetExclusions : [];
+}
+function leggTilSurveyEksklusjon(t, exclusion) {
+  if (!erSurvey(t)) return null;
+  const normalized = normaliserSurveyEksklusjon(exclusion, t.id, t.areaId);
+  if (!normalized) return null;
+  if (!Array.isArray(t.targetExclusions)) t.targetExclusions = [];
+  t.targetExclusions.push(normalized);
+  // Behold den gamle topplisten i backupformatet for bakoverkompatibilitet,
+  // men beregninger leser utelukkende surveyens eget snapshot.
+  surveyUtelukkelser.push(normalized);
+  return normalized;
+}
+function surveyModusTilSpor(mode) {
+  return mode === SURVEY.ACTIVITY.PICKING ? "plukk" :
+    (mode === SURVEY.ACTIVITY.TRANSPORT ? "transport" : "gaa");
+}
+function surveyAktivitetsnavn(mode) {
+  return mode === SURVEY.ACTIVITY.PICKING ? "Plukker" :
+    (mode === SURVEY.ACTIVITY.TRANSPORT ? "Transport" : "Undersøker");
+}
+
+function sikreSurveyEngine(t) {
+  if (!erSurvey(t)) return null;
+  if (surveyEngine && surveyEngineId === t.id) return surveyEngine;
+  const cache = t.coverageCache || {};
+  const points = t.surveyPoints || (t.surveyPoints = []);
+  const baseCount = Math.max(0, +t.surveyPointsBaseCount || 0);
+  let behandlet = Math.max(0, +cache.processedPointCount || 0);
+  let startIndex = behandlet - baseCount;
+  const cacheGyldig = startIndex >= 0 && startIndex <= points.length;
+  if (!cacheGyldig) { behandlet = baseCount; startIndex = 0; }
+  surveyEngine = new SURVEY.SurveyCoverageEngine(window.turf, {
+    searchRadiusMeters: t.searchRadiusMeters,
+    coverage: cacheGyldig && behandlet ? cache.coverage : null,
+    uncertainCoverage: cacheGyldig && behandlet ? cache.uncertainCoverage : null,
+    processedPointCount: behandlet,
+    geometryExecutor: surveyGeometryExecutor,
+    config: { minimumRelevantHoleAreaSquareMeters: +S.surveyHoleArea || 20 }
+  });
+  const engineEpoch = (surveyEngineEpochs.get(String(t.id)) || 0) + 1;
+  surveyEngineEpochs.set(String(t.id), engineEpoch);
+  surveyEngine.lyngEpoch = engineEpoch;
+  let previous = startIndex > 0 ? points[startIndex - 1] : (t.coverageAnchor || null);
+  // En lang JSON-hale må aldri replays synkront bare fordi kartet tegnes eller
+  // recovery bytter Survey. Den eksplisitte klar-funksjonen under hydrerer
+  // halen i bulk, med yield mellom små Turf-chunks og sluttunion i Worker.
+  surveyEngine.lyngHydration = {
+    owner: t,
+    points,
+    nextIndex: startIndex,
+    previous,
+    complete: startIndex >= points.length,
+    processedSinceCheckpoint: 0,
+    promise: null
+  };
+  surveyEngineId = t.id;
+  surveyPreviousAccepted = points.length ? points[points.length - 1] : (t.coverageAnchor || null);
+  return surveyEngine;
+}
+
+async function hydrerSurveyEngine(t, engine) {
+  const hydration = engine && engine.lyngHydration;
+  if (!hydration || hydration.complete) return engine;
+  if (hydration.promise) return hydration.promise;
+  hydration.promise = (async () => {
+    const baseCountBefore = Math.max(0, +t.surveyPointsBaseCount || 0);
+    let lastSnapshot = null;
+    // Et tidligere avbrudd kan ha rukket å stage alle punktene før workerens
+    // sluttunion feilet. Fullfør i så fall samme bulk uten duplikatreplay.
+    if (engine.isBulkActive()) {
+      const resumedBulkResult = await engine.endBulkAsync();
+      lastSnapshot = resumedBulkResult.snapshot;
+    }
+    while (hydration.nextIndex < hydration.points.length) {
+      if (surveySyncBlockedIds.has(String(t.id))) {
+        throw new Error("Survey-hydrering ble blokkert");
+      }
+      const limit = hydration.points.length;
+      await engine.beginBulkAsync();
+      try {
+        for (let index = hydration.nextIndex; index < limit; index++) {
+          const point = hydration.points[index];
+          engine.addPoint(point, hydration.previous);
+          hydration.previous = point;
+          hydration.nextIndex = index + 1;
+          hydration.processedSinceCheckpoint += 1;
+          if (hydration.nextIndex % SURVEY.DEFAULT_CONFIG.coverage.bulkChunkSize === 0) {
+            await new Promise(resolve => setTimeout(resolve, 0));
+          }
+        }
+        const bulkResult = await engine.endBulkAsync();
+        lastSnapshot = bulkResult.snapshot;
+      } catch (error) {
+        // Behold bulkState og nextIndex ved feil. Neste forsøk fullfører staged
+        // geometri før eventuelle nye punkter, uten dobbel prosessering.
+        throw error;
+      }
+    }
+    hydration.complete = true;
+    if (hydration.processedSinceCheckpoint > 0 && lastSnapshot) {
+      // Historiske/legacy-haler er nå eksakt committet. Komprimer dem også når
+      // den opprinnelige UI-forespørselen bare ba om preview, ellers måtte en
+      // fullført survey gjøre samme bulk-hydrering ved hvert engine-bytte.
+      await checkpointSurveyDekning(t, engine, lastSnapshot, engine.lyngEpoch);
+      const trimmed = Math.max(0, (+t.surveyPointsBaseCount || 0) - baseCountBefore);
+      hydration.nextIndex = Math.max(0, hydration.nextIndex - trimmed);
+      hydration.processedSinceCheckpoint = Math.max(
+        0, hydration.processedSinceCheckpoint - trimmed
+      );
+      await lagreNa();
+    }
+    return engine;
+  })();
+  try { return await hydration.promise; }
+  finally { hydration.promise = null; }
+}
+
+async function sikreSurveyEngineKlar(t, reclaimIfStale) {
+  while (erSurvey(t) && turer.includes(t)) {
+    const engine = sikreSurveyEngine(t);
+    await hydrerSurveyEngine(t, engine);
+    const epochCurrent = surveyEngineEpochs.get(String(t.id)) === engine.lyngEpoch;
+    const globallyOwned = surveyEngine === engine && surveyEngineId === t.id;
+    if (epochCurrent && (globallyOwned || !reclaimIfStale)) {
+      // En derive kan trygt bruke sin ferdighydrerte lokale motor selv om en
+      // annen Survey nå eier singletonen; snapshot/render er per survey og
+      // epoch-voktet. Bare samplefilteret trenger global previous/ownership.
+      if (globallyOwned) {
+        surveyPreviousAccepted = (t.surveyPoints || []).length
+          ? t.surveyPoints[t.surveyPoints.length - 1] : (t.coverageAnchor || null);
+      }
+      return engine;
+    }
+    // To historiske visninger skal ikke stjele singletonen tilbake fra
+    // hverandre i en evig A/B-hydrering. Bare autoritative sample-/syncbaner
+    // får kreve motoren på nytt; en stale derive avsluttes stille.
+    if (!reclaimIfStale) return null;
+  }
+  throw new Error("Survey finnes ikke lenger");
+}
+
+function formatSurveyAreal(squareMeters) {
+  const value = Math.max(0, +squareMeters || 0);
+  return value >= 10000 ? `${fmt1(value / 1000)} daa` : `${Math.round(value).toLocaleString("no-NO")} m²`;
+}
+
+function oppdaterSurveyDashboard() {
+  const t = aktivSurvey();
+  const card = document.getElementById("surveyCard");
+  card.classList.toggle("vis", !!t);
+  if (!t) return;
+  const stats = t.statistics || {};
+  const nativeUncertain = surveyStore.kind === "native-sqlite" && !!t.nativeStateUncertain;
+  document.getElementById("surveyAktivitet").textContent = nativeUncertain
+    ? "Avstemmer sporing …"
+    : (t.status === "pauset" ? "Pauset" : surveyAktivitetsnavn(t.currentActivity));
+  document.getElementById("surveyPst").textContent = stats.coveragePercent == null ? "Uten område" : `${Math.round(stats.coveragePercent)} %`;
+  document.getElementById("surveyGjenstar").textContent = stats.coveragePercent == null ? formatSurveyAreal(stats.coveredAreaSquareMeters) : formatSurveyAreal(stats.remainingAreaSquareMeters);
+  document.getElementById("surveyGjenstarLabel").textContent = stats.coveragePercent == null ? "dekket" : "gjenstår";
+  document.getElementById("surveyDistanse").textContent = `${fmt1((t.distanse || 0) / 1000)} km`;
+  document.getElementById("surveyTid").textContent = fmtVarighet(turVarighet(t));
+  const nativeGpsIssue = surveyStore.kind === "native-sqlite" ? t.nativeGpsIssueCode : null;
+  const quality = nativeGpsIssue ? SURVEY.QUALITY.REJECTED : (t.lastQuality || "—");
+  const gps = document.getElementById("surveyGps");
+  gps.textContent = nativeUncertain
+    ? "GPS: status usikker"
+    : (nativeGpsIssue === "NO_LOCATION_FIX"
+      ? "GPS: venter på signal"
+      : (nativeGpsIssue
+        ? "GPS: utilgjengelig"
+        : "GPS: " + ({ GOOD: "God", ACCEPTABLE: "Akseptabel", POOR: "Dårlig", REJECTED: "Avvist" }[quality] || "søker")));
+  gps.classList.toggle("survey-gps-poor", nativeUncertain || quality === "POOR" || quality === "REJECTED");
+  document.querySelectorAll("[data-survey-activity]").forEach(button => {
+    button.classList.toggle("valgt", button.dataset.surveyActivity === t.currentActivity && t.status === "aktiv");
+    button.disabled = nativeUncertain || t.status !== "aktiv" || !!t.surveyTransitioning || !!t.surveyFinalizing;
+  });
+  const areaButton = document.getElementById("btnSurveyOmrade");
+  areaButton.textContent = t.areaId ? "Bytt område" : "Velg område";
+  areaButton.title = t.targetName ? `Målområde: ${t.targetName}` : "Velg et målområde for dekningsprosent og hull";
+  areaButton.disabled = !!t.surveyTransitioning || !!t.surveyFinalizing;
+  document.getElementById("btnSurveyFunn").disabled = nativeUncertain ||
+    t.status !== "aktiv" || !!t.surveyTransitioning || !!t.surveyFinalizing;
+  const percent = stats.coveragePercent == null ? 0 : stats.coveragePercent;
+  document.getElementById("dekningBar").style.width = Math.min(100, percent) + "%";
+  const debug = document.getElementById("surveyDebug");
+  debug.hidden = !SURVEY_DEBUG;
+  if (SURVEY_DEBUG) {
+    debug.textContent = [
+      `raw=${+t.rawSampleCount || 0} accepted=${(+t.surveyPointsBaseCount || 0) + (t.surveyPoints || []).length} rejected=${+t.rejectedSampleCount || 0}`,
+      `accuracy=${t.lastAccuracy == null ? "—" : Math.round(t.lastAccuracy) + "m"} quality=${quality}`,
+      `nativeGps=${t.nativeGpsIssueCode || "ok"}`,
+      `cursor=${+t.nativeCursor || 0} holes=${surveyHoleCandidates.length}`,
+      `coveragePoints=${+(t.coverageCache && t.coverageCache.processedPointCount) || 0}`,
+      stats.geometryError ? `geometryError=${stats.geometryError}` : "geometry=ok",
+      `geometryThread=${surveyGeometryMode}`
+    ].join("\n");
+  }
+}
+
+function tegnSurveyFunn(t) {
+  surveyFunnLag.clearLayers();
+  if (!t) return;
+  const colors = { NONE: "#8A9490", LOW: "#D9A441", GOOD: "#7A8A5E", HIGH: "#667BC1" };
+  for (const observation of surveyObservasjoner.filter(x => x.surveyId === t.id)) {
+    L.circleMarker([observation.lat, observation.lng], {
+      pane: "surveyAssistPane", radius: 7, weight: 2, color: "#F9F4ED",
+      fillColor: colors[observation.rating] || colors.NONE, fillOpacity: .96
+    }).bindTooltip(({ NONE: "Ingen", LOW: "Lite", GOOD: "Bra", HIGH: "Mye" })[observation.rating] || "Funn")
+      .addTo(surveyFunnLag);
+  }
+}
+
+function tegnSurveyLag(t, stats, snapshot) {
+  surveyDekningLag.clearLayers(); surveyUsikkerLag.clearLayers(); surveyUdekketLag.clearLayers(); surveyUtelattLag.clearLayers();
+  surveyMaalLag.clearLayers(); surveyHistorikkLag.clearLayers();
+  if (!t || !erSurvey(t)) { tegnSurveyFunn(null); return; }
+  const engine = snapshot ? null : sikreSurveyEngine(t);
+  const viewSnapshot = snapshot || t.coverageCache || {};
+  // Rendering må aldri materialisere pending/full bulk-geometri på UI-tråden.
+  // En avledet jobb leverer et atomisk snapshot; direkte hjelpevisninger får
+  // bare sist committede cache mens neste worker-jobb pågår.
+  const hasCoverage = Object.prototype.hasOwnProperty.call(viewSnapshot, "coverage");
+  const hasUncertain = Object.prototype.hasOwnProperty.call(viewSnapshot, "uncertainCoverage");
+  const coverage = hasCoverage ? viewSnapshot.coverage : (engine && engine.getCoverage(false));
+  const uncertain = hasUncertain
+    ? viewSnapshot.uncertainCoverage : (engine && engine.getUncertainCoverage(false));
+  if (coverage) surveyDekningLag.addData(coverage);
+  if (uncertain) surveyUsikkerLag.addData(uncertain);
+  const target = surveyOmradeGeoJson(t);
+  if (target) surveyMaalLag.addData(target);
+  if (stats && stats.uncovered) surveyUdekketLag.addData(stats.uncovered);
+  for (const exclusion of surveyEksklusjoner(t)) if (exclusion.geometry) surveyUtelattLag.addData(exclusion.geometry);
+  if (String(S.surveyHistorikk) !== "current") {
+    const now = Date.now();
+    const maxAge = String(S.surveyHistorikk) === "7" ? 7 * 86400000 : (String(S.surveyHistorikk) === "30" ? 30 * 86400000 : Infinity);
+    for (const historic of turer) {
+      if (!erSurvey(historic) || historic.id === t.id || now - historic.t0 > maxAge) continue;
+      const historicCoverage = historic.coverageCache && historic.coverageCache.coverage;
+      if (historicCoverage) surveyHistorikkLag.addData(historicCoverage);
+    }
+  }
+  tegnSurveyFunn(t);
+}
+
+async function checkpointSurveyDekning(t, engine, preparedSnapshot, expectedEngineEpoch) {
+  const activeEngine = engine || sikreSurveyEngine(t);
+  const engineEpoch = expectedEngineEpoch || activeEngine.lyngEpoch ||
+    surveyEngineEpochs.get(String(t.id)) || 0;
+  const points = t.surveyPoints || (t.surveyPoints = []);
+  const baseCount = Math.max(0, +t.surveyPointsBaseCount || 0);
+  const snapshot = preparedSnapshot || await activeEngine.snapshotAsync(true);
+  if (!turer.includes(t) || surveySyncBlockedIds.has(String(t.id)) ||
+      surveyEngineEpochs.get(String(t.id)) !== engineEpoch) return snapshot;
+  t.coverageCache = snapshot;
+  if (t.surveyPoints === points && points.length) {
+    // Punkter kan ha blitt lagt til etter at snapshot-jobben ble satt i kø.
+    // Trim bare prefikset som snapshot.processedPointCount faktisk omfatter.
+    const processedTail = Math.min(points.length, Math.max(
+      0, (+snapshot.processedPointCount || 0) - baseCount
+    ));
+    if (processedTail) {
+      t.coverageAnchor = points[processedTail - 1];
+      t.surveyPointsBaseCount = baseCount + processedTail;
+      points.splice(0, processedTail);
+    }
+  }
+  return snapshot;
+}
+
+function surveyWorkerFallback(t, error, reason) {
+  surveyGeometryMode = surveyGeometryExecutor ? "fallback" : "main-thread";
+  if (surveyGeometryFallbackLogged) return;
+  surveyGeometryFallbackLogged = true;
+  surveyLog("GEOMETRY_WORKER_FALLBACK", {
+    surveyId: t && t.id,
+    reason: reason || (surveyGeometryExecutor ? "WORKER_FAILED" : "WORKER_UNAVAILABLE"),
+    message: String(error && error.message || error || "Geometri kjøres på UI-tråden").slice(0, 500)
+  });
+}
+
+async function utledSurveyGeometri(t, target, coverage, exclusions, currentPosition, options) {
+  const args = [window.turf, target, coverage, exclusions, currentPosition, options];
+  if (!surveyGeometryExecutor) {
+    surveyWorkerFallback(t, null, "WORKER_UNAVAILABLE");
+    return SURVEY.deriveCoverageGeometry(...args);
+  }
+  try {
+    const result = await surveyGeometryExecutor({
+      operation: "deriveCoverageGeometry", target, coverage, exclusions,
+      currentPosition, options
+    });
+    if (!result || !result.stats || !Array.isArray(result.holes)) {
+      throw new Error("Geometri-worker returnerte ugyldig avledet resultat");
+    }
+    surveyGeometryMode = "worker";
+    return result;
+  } catch (workerError) {
+    if (workerError && workerError.surveyWorkerComputationError) throw workerError;
+    try {
+      const local = SURVEY.deriveCoverageGeometry(...args);
+      surveyWorkerFallback(t, workerError, "WORKER_FAILED");
+      return local;
+    } catch (localError) {
+      try { localError.geometryExecutorError = String(workerError && workerError.message || workerError); }
+      catch (ignored) { /* Error-objektet kan være fryst. */ }
+      throw localError;
+    }
+  }
+}
+
+async function ventSurveyBulkFerdig(t, engine) {
+  const deadline = Date.now() + 30000;
+  while (engine.isBulkActive()) {
+    if (!turer.includes(t) || surveySyncBlockedIds.has(String(t.id))) return false;
+    if (Date.now() >= deadline) {
+      surveyLog("DERIVED_BULK_WAIT_TIMEOUT", { surveyId: t.id });
+      return false;
+    }
+    await new Promise(resolve => setTimeout(resolve, 16));
+  }
+  return true;
+}
+
+async function beregnSurveyAvledetEnGang(t, request, revision, state) {
+  if (!turer.includes(t) || surveySyncBlockedIds.has(String(t.id))) return t.statistics || null;
+  const engine = await sikreSurveyEngineKlar(t, false);
+  if (!engine) return t.statistics || null;
+  const engineEpoch = engine.lyngEpoch || surveyEngineEpochs.get(String(t.id)) || 0;
+  if (!await ventSurveyBulkFerdig(t, engine)) return t.statistics || null;
+
+  const snapshot = await engine.viewSnapshotAsync(request.flush);
+  if (!turer.includes(t) || surveySyncBlockedIds.has(String(t.id)) ||
+      surveyEngineEpochs.get(String(t.id)) !== engineEpoch) return t.statistics || null;
+  if (revision !== state.revision) {
+    // En nyere request overtar også et allerede ønsket checkpoint. Selve
+    // engine-mergen kan være committet, men cache/punktkomprimering skal følge
+    // den nyeste generasjonen og aldri en foreldet jobb.
+    if (request.flush && state.pending) state.pending.flush = true;
+    return t.statistics || null;
+  }
+  if (request.flush) await checkpointSurveyDekning(t, engine, snapshot, engineEpoch);
+  if (revision !== state.revision || !turer.includes(t) ||
+      surveySyncBlockedIds.has(String(t.id)) ||
+      surveyEngineEpochs.get(String(t.id)) !== engineEpoch) return t.statistics || null;
+
+  const target = surveyOmradeGeoJson(t);
+  const exclusions = surveyEksklusjoner(t);
+  const currentPosition = posisjon && Number.isFinite(+posisjon.lat) && Number.isFinite(+posisjon.lng)
+    ? { lat: +posisjon.lat, lng: +posisjon.lng } : null;
+  const options = {
+    minimumRelevantHoleAreaSquareMeters: +S.surveyHoleArea || 20,
+    ignoredHoleIds: (t.ignoredHoleIds || []).slice()
+  };
+  const previousGeometryError = t.statistics && t.statistics.geometryError;
+  let geometryError = null;
+  let derived;
+  try {
+    derived = await utledSurveyGeometri(
+      t, target, snapshot.coverage, exclusions, currentPosition, options
+    );
+  } catch (error) {
+    geometryError = String(error && error.message || "Ugyldig områdegeometri").slice(0, 240);
+    // Et gammelt eller selvkryssende målområde skal ikke stoppe sporing eller
+    // dekning uten mål. Den eksakte dekningen beholdes; mål/hull deaktiveres.
+    derived = await utledSurveyGeometri(t, null, snapshot.coverage, [], currentPosition, options);
+    derived.holes = [];
+  }
+  if (revision !== state.revision || !turer.includes(t) ||
+      surveySyncBlockedIds.has(String(t.id)) ||
+      surveyEngineEpochs.get(String(t.id)) !== engineEpoch) return t.statistics || null;
+  if (geometryError && geometryError !== previousGeometryError) {
+    surveyLog("TARGET_GEOMETRY_REJECTED", { surveyId: t.id, message: geometryError });
+  }
+
+  const stats = derived.stats;
+  t.statistics = Object.assign({}, t.statistics || {}, {
+    distanceMeters: t.distanse || 0,
+    totalAreaSquareMeters: stats.totalAreaSquareMeters,
+    coveredAreaSquareMeters: stats.coveredAreaSquareMeters,
+    remainingAreaSquareMeters: stats.remainingAreaSquareMeters,
+    coveragePercent: stats.coveragePercent,
+    completed: stats.coveragePercent != null &&
+      stats.coveragePercent >= SURVEY.DEFAULT_CONFIG.coverage.completionPercent,
+    geometryError,
+    updatedAt: Date.now()
+  });
+  if (t.statistics.coveragePercent != null && t.statistics.coveragePercent >= 90 && !t.almostCompleteNotified) {
+    t.almostCompleteNotified = true;
+    emitSurveyEvent("TARGET_ALMOST_COMPLETE", {
+      surveyId: t.id, coveragePercent: Math.round(t.statistics.coveragePercent)
+    });
+  }
+  if (request.render && String(visTurId || "") === String(t.id)) {
+    surveyHoleCandidates = geometryError ? [] : derived.holes;
+    tegnSurveyLag(t, stats, snapshot);
+    oppdaterSurveyDashboard();
+  }
+  if (request.flush) surveyLog("COVERAGE_UPDATED", {
+    surveyId: t.id,
+    coveredAreaSquareMeters: Math.round(stats.coveredAreaSquareMeters),
+    coveragePercent: stats.coveragePercent == null
+      ? null : Math.round(stats.coveragePercent * 10) / 10
+  });
+  return stats;
+}
+
+function beregnSurveyAvledet(t, flush, render) {
+  if (!erSurvey(t)) return Promise.resolve(null);
+  let state = surveyDerivedJobs.get(String(t.id));
+  if (!state || state.owner !== t) {
+    state = {
+      owner: t, pending: null, running: false,
+      revision: 0, promise: Promise.resolve(null)
+    };
+    surveyDerivedJobs.set(String(t.id), state);
+  }
+  const requested = { flush: !!flush, render: render !== false };
+  state.pending = state.pending ? {
+    flush: state.pending.flush || requested.flush,
+    render: state.pending.render || requested.render
+  } : requested;
+  state.revision += 1;
+  if (!state.running) {
+    state.running = true;
+    state.promise = (async () => {
+      let latest = t.statistics || null;
+      while (true) {
+        while (state.pending) {
+          const request = state.pending;
+          const revision = state.revision;
+          state.pending = null;
+          try {
+            latest = await beregnSurveyAvledetEnGang(t, request, revision, state);
+          } catch (error) {
+            surveyLog("DERIVED_GEOMETRY_FAILED", {
+              surveyId: t.id, message: String(error && error.message || error)
+            });
+          }
+        }
+        // Sett flagget før retur i samme synkrone mikrosteg. En ny request ser
+        // dermed enten denne drain-en eller starter sikkert en ny; den kan ikke
+        // bli liggende igjen i vinduet mellom Promise-resolution og finally.
+        state.running = false;
+        if (!state.pending) {
+          if (!turer.includes(t) && surveyDerivedJobs.get(String(t.id)) === state) {
+            surveyDerivedJobs.delete(String(t.id));
+          }
+          return latest;
+        }
+        state.running = true;
+      }
+    })();
+  }
+  return state.promise;
+}
+
+function planleggSurveyAvledet(force) {
+  const t = aktivSurvey();
+  if (!t) return Promise.resolve(null);
+  if (force) {
+    if (surveyDerivedTimer) clearTimeout(surveyDerivedTimer);
+    surveyDerivedTimer = null;
+    return beregnSurveyAvledet(t, true);
+  }
+  if (surveyDerivedTimer) return Promise.resolve(t.statistics || null);
+  surveyDerivedTimer = setTimeout(() => {
+    surveyDerivedTimer = null;
+    // Union, differanse og kartlag oppdateres når motorens lille batch er
+    // flush-et. Mellom batchene trenger bare tids-/GPS-panelet en oppfriskning.
+    if (aktivSurvey()) oppdaterSurveyDashboard();
+  }, SURVEY.DEFAULT_CONFIG.coverage.liveHoleRefreshMs);
+  return Promise.resolve(t.statistics || null);
+}
+
+function varsleSurveyGps(t, quality, poorSince, preserveSampleQuality) {
+  const now = Date.now();
+  if (quality === SURVEY.QUALITY.POOR || quality === SURVEY.QUALITY.REJECTED) {
+    if (!surveyPoorSince) {
+      const suggested = +poorSince;
+      surveyPoorSince = Number.isFinite(suggested) && suggested > 0
+        ? Math.min(now, suggested) : now;
+    }
+    if (!surveyPoorVarslet && now - surveyPoorSince >= SURVEY.DEFAULT_CONFIG.alerts.poorGpsAfterMs) {
+      surveyPoorVarslet = true;
+      emitSurveyEvent("GPS_POOR", { surveyId: t.id });
+      melding("GPS-signalet er dårlig — usikker dekning teller ikke som fullført", 4500);
+      if (S.surveyHaptics && navigator.vibrate) navigator.vibrate([100, 80, 100]);
+    }
+  } else {
+    if (surveyPoorVarslet) { emitSurveyEvent("GPS_RECOVERED", { surveyId: t.id }); melding("GPS-signalet er godt igjen"); }
+    surveyPoorSince = null; surveyPoorVarslet = false;
+  }
+  if (!preserveSampleQuality) t.lastQuality = quality;
+}
+
+function oppdaterSurveyGpsFraNativeState(t, state) {
+  if (!t || !state || surveyStore.kind !== "native-sqlite") return false;
+  const previousIssue = t.nativeGpsIssueCode || null;
+  const status = String(state.status || "").toUpperCase();
+  const updatedAt = Number.isFinite(+state.updatedAt) ? +state.updatedAt : Date.now();
+  const intervalMs = Math.max(1000, +state.intervalMs || SURVEY.DEFAULT_CONFIG.tracking.intervalMs);
+  const noFixAfterMs = Math.max(
+    SURVEY.DEFAULT_CONFIG.alerts.poorGpsAfterMs,
+    intervalMs * 6
+  );
+  let issueCode = state.lastErrorCode == null ? null : String(state.lastErrorCode);
+  let issueMessage = state.lastErrorMessage == null ? null : String(state.lastErrorMessage).slice(0, 240);
+  if (!issueCode && status === "ACTIVE" && Date.now() - updatedAt >= noFixAfterMs) {
+    issueCode = "NO_LOCATION_FIX";
+    issueMessage = "Ingen nye posisjoner fra Android";
+  }
+  t.nativeGpsIssueCode = issueCode;
+  t.nativeGpsIssueMessage = issueMessage;
+  if (issueCode) {
+    if (previousIssue !== issueCode) {
+      surveyLog("GPS_QUALITY_CHANGED", {
+        surveyId: t.id, from: previousIssue ? SURVEY.QUALITY.REJECTED : (t.lastQuality || null),
+        to: SURVEY.QUALITY.REJECTED, reason: issueCode
+      });
+    }
+    if (t.id === aktivTurId) varsleSurveyGps(t, SURVEY.QUALITY.REJECTED, updatedAt, true);
+  } else if (previousIssue) {
+    if (status === "ACTIVE" && t.lastQuality) {
+      varsleSurveyGps(t, t.lastQuality, null, true);
+    } else {
+      surveyPoorSince = null;
+      surveyPoorVarslet = false;
+    }
+  }
+  return previousIssue !== issueCode;
+}
+
+function registrerSurveyOverlap(t, distanceMeters, overlapPercent) {
+  if (distanceMeters <= 0 || t.currentActivity === SURVEY.ACTIVITY.TRANSPORT) return;
+  surveyOverlapVindu.push({ distanceMeters, weighted: distanceMeters * overlapPercent, at: Date.now() });
+  let total = surveyOverlapVindu.reduce((sum, x) => sum + x.distanceMeters, 0);
+  while (surveyOverlapVindu.length > 1 && total - surveyOverlapVindu[0].distanceMeters >= SURVEY.DEFAULT_CONFIG.alerts.overlapSegmentMeters) {
+    total -= surveyOverlapVindu.shift().distanceMeters;
+  }
+  if (total < SURVEY.DEFAULT_CONFIG.alerts.overlapSegmentMeters) return;
+  const percent = surveyOverlapVindu.reduce((sum, x) => sum + x.weighted, 0) / total;
+  if (percent >= SURVEY.DEFAULT_CONFIG.alerts.highOverlapPercent && Date.now() - surveySistVarslet >= SURVEY.DEFAULT_CONFIG.alerts.cooldownMs) {
+    surveySistVarslet = Date.now();
+    emitSurveyEvent("ENTERED_HIGH_OVERLAP", { surveyId: t.id, overlapPercent: Math.round(percent) });
+    melding("Du går hovedsakelig i allerede undersøkt område", 4200);
+    if (S.surveyHaptics && navigator.vibrate) navigator.vibrate([60, 80, 60]);
+  }
+}
+
+async function behandleSurveySample(t, raw, bulkSync) {
+  if (!erSurvey(t) || !raw || surveySyncBlockedIds.has(String(t.id))) return;
+  const rawId = Math.max(0, +raw.id || 0);
+  if (rawId && rawId <= (+t.nativeCursor || 0)) return;
+  const normalized = SURVEY.normalizeRawSample(Object.assign({}, raw, {
+    surveyId: t.id,
+    activityMode: raw.activityMode || t.currentActivity
+  }));
+  // Engine-bytte og eventuell historisk hale må være ferdig før filteret leser
+  // forrige punkt. Sample-køen er serialisert, så nye punkt passerer ikke
+  // hydreringen eller en pågående streng recovery-replay.
+  const engine = await sikreSurveyEngineKlar(t, true);
+  if (surveySyncBlockedIds.has(String(t.id))) return;
+  const previous = surveyPreviousAccepted;
+  t.lastAccuracy = Number.isFinite(normalized.accuracy) ? normalized.accuracy : null;
+  const forcedBreak = !!t.surveyBreakPending;
+  // Pause/restart etablerer en ny filterkjede. Hvis den gamle posisjonen ble
+  // brukt her, kunne første gode punkt etter en kort pause feilaktig avvises
+  // som et hastighetshopp før breakBefore ble satt lenger nede.
+  const filtered = surveyFilter.process(normalized, forcedBreak ? null : previous);
+  if (raw.accepted === false) {
+    filtered.accepted = false; filtered.contributes = false;
+    filtered.quality = SURVEY.QUALITY.REJECTED;
+    filtered.rejectionReason = raw.rejectionReason || "NATIVE_REJECTED";
+  }
+  if (rawId) t.nativeCursor = Math.max(+t.nativeCursor || 0, rawId);
+  t.rawSampleCount = (+t.rawSampleCount || 0) + 1;
+  if (!bulkSync && t.lastQuality && t.lastQuality !== filtered.quality) {
+    surveyLog("GPS_QUALITY_CHANGED", { surveyId: t.id, from: t.lastQuality, to: filtered.quality });
+  }
+  if (t.id === aktivTurId && !bulkSync) varsleSurveyGps(t, filtered.quality);
+  else t.lastQuality = filtered.quality;
+  if (!filtered.accepted) {
+    t.rejectedSampleCount = (+t.rejectedSampleCount || 0) + 1;
+    if (!bulkSync) {
+      surveyLog("LOCATION_REJECTED", { surveyId: t.id, quality: filtered.quality, reason: filtered.rejectionReason });
+    }
+    if (t.id === aktivTurId && !bulkSync) oppdaterSurveyDashboard();
+    return {
+      changed: false, flushed: false,
+      sampleFeedback: {
+        accepted: false, quality: filtered.quality,
+        rejectionReason: filtered.rejectionReason || null,
+        activityMode: filtered.activityMode
+      }
+    };
+  }
+  // Bare et akseptert punkt får bli brukerens operative posisjon. Dermed kan
+  // et GPS-hopp/mock-punkt heller ikke plassere en observasjon feil.
+  if (t.id === aktivTurId) {
+    posisjon = L.latLng(filtered.lat, filtered.lng); posisjon.acc = filtered.accuracy;
+    if (S.lat0 == null) S.lat0 = filtered.lat;
+    if (!bulkSync && !stille()) {
+      document.getElementById("varsel").classList.remove("vis");
+      document.getElementById("chipGps").classList.toggle("svak", filtered.accuracy > S.acc);
+      document.getElementById("vGps").textContent = "± " + Math.round(filtered.accuracy) + " m";
+      posSirkel.setLatLng(posisjon); noySirkel.setLatLng(posisjon).setRadius(filtered.accuracy);
+      oppdaterPosisjonRetning(); oppdaterKoord();
+      if (folg) map.setView(posisjon, Math.max(map.getZoom(), 16), { animate: true });
+    }
+  }
+  filtered.breakBefore = !!filtered.breakBefore || forcedBreak;
+  t.surveyBreakPending = false;
+  if (filtered.contributes && previous && !filtered.breakBefore) {
+    t.distanse = Math.max(0, +t.distanse || 0) + Math.max(0, filtered.distanceMeters || 0);
+    if (t.id === visTurId) distanse = t.distanse;
+  }
+  t.surveyPoints.push(filtered);
+  let surveySporPunkt = null;
+  if (!bulkSync) {
+    surveyLog("LOCATION_ACCEPTED", { surveyId: t.id, quality: filtered.quality, activityMode: filtered.activityMode });
+  }
+  if (filtered.contributes) {
+    surveySporPunkt = [
+      filtered.lat, filtered.lng, filtered.timestamp, surveyModusTilSpor(filtered.activityMode),
+      filtered.accuracy, filtered.breakBefore ? 1 : undefined
+    ];
+    t.spor.push(surveySporPunkt);
+    if (t.id === visTurId) {
+      spor = t.spor;
+    }
+  }
+  const result = engine.isBulkActive()
+    ? engine.addPoint(filtered, previous)
+    : await engine.addPointAsync(filtered, previous);
+  if (result.offloaded === true) {
+    surveyGeometryMode = "worker";
+  } else if (result.offloaded === false) {
+    surveyWorkerFallback(
+      t,
+      result.offloadError || null,
+      result.offloadFallback ? "WORKER_FAILED" : "WORKER_UNAVAILABLE"
+    );
+  }
+  if (surveySporPunkt) leggTilSurveySporVisning(t, surveySporPunkt, !bulkSync);
+  if (result.changed && filtered.quality !== SURVEY.QUALITY.POOR && t.id === aktivTurId) {
+    merkDekning(filtered.lat, filtered.lng, t.searchRadiusMeters, DEKNING.undersokt);
+  }
+  if (t.id === aktivTurId && result.overlapReset) surveyOverlapVindu = [];
+  if (t.id === aktivTurId && !bulkSync && result.overlapMeasured && !result.uncertain) {
+    registrerSurveyOverlap(t, result.overlapDistanceMeters || 0, result.overlapPercent || 0);
+  }
+  surveyPreviousAccepted = filtered;
+  const surveyTailLength = (t.surveyPoints || []).length;
+  const surveyPendingEmpty = !engine.pendingCoverage.length && !engine.pendingUncertainCoverage.length;
+  if (!engine.isBulkActive() && !result.flushed &&
+      surveyTailLength >= SURVEY.DEFAULT_CONFIG.coverage.batchSize &&
+      (surveyPendingEmpty ||
+        surveyTailLength >= SURVEY.DEFAULT_CONFIG.coverage.checkpointTailPoints)) {
+    // TRANSPORT og stasjonære keepalives endrer ikke coverage, men skal heller
+    // ikke få den kompakte JSON-halen til å vokse uten grense. Delvise
+    // coverage-batcher beholdes til de kan flushe asynkront i worker. En høy
+    // sikkerhetsgrense hindrer at ett gammelt pending-punkt etterfulgt av lang
+    // transport gjør JSON-halen ubegrenset.
+    await checkpointSurveyDekning(t, engine);
+  }
+  if (t.id === aktivTurId && !bulkSync) {
+    if (stille()) oppdaterSpar(); else { oppdaterHud(); oppdaterSurveyDashboard(); }
+  }
+  if (t.id === aktivTurId && !bulkSync) await planleggSurveyAvledet(!!result.flushed);
+  result.sampleFeedback = {
+    accepted: true, quality: filtered.quality,
+    rejectionReason: null, activityMode: filtered.activityMode
+  };
+  return result;
+}
+
+function leggSurveyWebSampleIKo(pos) {
+  const t = aktivSurvey();
+  if (!t || t.status !== "aktiv" || t.surveyTransitioning || t.surveyFinalizing ||
+      surveySyncBlockedIds.has(String(t.id))) return;
+  const coords = pos.coords || {};
+  const raw = {
+    surveyId: t.id, latitude: coords.latitude, longitude: coords.longitude,
+    timestamp: +pos.timestamp || Date.now(), accuracy: coords.accuracy,
+    altitude: coords.altitude, speed: coords.speed, heading: coords.heading,
+    activityMode: t.currentActivity, source: "WEB_GEOLOCATION"
+  };
+  surveySampleQueue = surveySampleQueue.then(async () => {
+    const same = turer.find(x => x.id === raw.surveyId);
+    if (!same || same.status !== "aktiv" || surveySyncBlockedIds.has(String(raw.surveyId))) return;
+    try {
+      // Sletting kan ha blokkert økten mens dette punktet ventet i køen.
+      // Kontrollen må ligge rett foran den autoritative IDB-append-en.
+      if (surveySyncBlockedIds.has(String(raw.surveyId))) return;
+      const stored = await surveyStore.append(raw);
+      await behandleSurveySample(same, stored);
+    } catch (error) {
+      melding("Kunne ikke lagre GPS-punktet lokalt", 3500);
+    }
+  });
+}
+
+function synkSurveySamples(t, strict) {
+  if (!t || !erSurvey(t)) return Promise.resolve(false);
+  if (surveySyncBlockedIds.has(String(t.id))) return Promise.resolve(false);
+  // En eksplisitt brukertransition eier grensen mellom to native states.
+  // Pause/finish bruker strict sync selv; periodisk live-sync venter til etterpå.
+  if (!strict && (t.surveyTransitioning || t.surveyFinalizing)) return Promise.resolve(false);
+  if (surveySyncing) {
+    if (!strict && surveySyncTargetId === t.id) return surveySyncPromise;
+    return surveySyncPromise.then(() => synkSurveySamples(t, strict));
+  }
+  surveySyncing = true;
+  surveySyncTargetId = t.id;
+  surveySyncPromise = (async () => {
+    let bulkEngine = null;
+    let bulkActive = false;
+    try {
+      bulkEngine = strict ? await sikreSurveyEngineKlar(t, true) : null;
+      if (bulkEngine) {
+        if (bulkEngine.isBulkActive()) {
+          // Et tidligere strengt forsøk kan ha fått både normal og best-effort
+          // sluttunion til å feile. Core beholder staged chunks; fullfør dem
+          // før en ny bulk starter, uten å replaye punktene fra t.surveyPoints.
+          bulkActive = true;
+          await bulkEngine.endBulkAsync();
+          bulkActive = false;
+        }
+        // En mål-/hull-preview kan allerede stå i worker-køen. Bulk må eie
+        // motoren først etter at denne atomiske jobben er ferdig.
+        await bulkEngine.beginBulkAsync();
+        bulkActive = true;
+      }
+      let pages = 0;
+      let receivedSamples = false;
+      let receivedCount = 0;
+      let replayProcessed = 0;
+      let coverageFlushed = false;
+      let lastSampleFeedback = null;
+      const qualityBeforeSync = t.nativeGpsIssueCode
+        ? SURVEY.QUALITY.REJECTED : (t.lastQuality || null);
+      const overlapMeasurements = [];
+      const maximumPages = strict ? 200 : 20;
+      while (pages++ < maximumPages) {
+        const samples = await surveyStore.list(t.id, t.nativeCursor || 0, 750);
+        if (surveySyncBlockedIds.has(String(t.id))) return false;
+        if (!samples.length) break;
+        receivedSamples = true;
+        receivedCount += samples.length;
+        for (const sample of samples) {
+          const result = await behandleSurveySample(t, sample, true);
+          coverageFlushed = coverageFlushed || !!(result && result.flushed);
+          if (result && result.sampleFeedback) lastSampleFeedback = result.sampleFeedback;
+          if (!strict && result && result.overlapMeasured && !result.uncertain) {
+            overlapMeasurements.push(result);
+          }
+          replayProcessed += 1;
+          if (strict && replayProcessed % SURVEY.DEFAULT_CONFIG.coverage.bulkChunkSize === 0) {
+            // Små bulk-chunks unioneres lokalt; slipp rendering/input til mellom
+            // delene før den tunge sluttunionen flyttes til worker.
+            await new Promise(resolve => setTimeout(resolve, 0));
+          }
+        }
+        if (samples.length < 750) break;
+      }
+      if (strict) {
+        const bulkResult = await bulkEngine.endBulkAsync();
+        bulkActive = false;
+        coverageFlushed = coverageFlushed || !!bulkResult.flushed;
+        const render = t.id === aktivTurId || (!aktivSurvey() && t.id === visTurId);
+        await beregnSurveyAvledet(t, true, render);
+      } else if (receivedSamples) {
+        if (coverageFlushed) {
+          const render = t.id === aktivTurId || (!aktivSurvey() && t.id === visTurId);
+          await beregnSurveyAvledet(t, true, render);
+        } else if (t.id === aktivTurId) {
+          planleggSurveyAvledet(false);
+        }
+        if (lastSampleFeedback && t.id === aktivTurId) {
+          const previousIssue = t.nativeGpsIssueCode;
+          t.nativeGpsIssueCode = null;
+          t.nativeGpsIssueMessage = null;
+          if (qualityBeforeSync && qualityBeforeSync !== lastSampleFeedback.quality) {
+            surveyLog("GPS_QUALITY_CHANGED", {
+              surveyId: t.id, from: qualityBeforeSync, to: lastSampleFeedback.quality,
+              reason: previousIssue || lastSampleFeedback.rejectionReason || null
+            });
+          }
+          varsleSurveyGps(t, lastSampleFeedback.quality);
+          surveyLog(lastSampleFeedback.accepted ? "LOCATION_ACCEPTED" : "LOCATION_REJECTED", {
+            surveyId: t.id, quality: lastSampleFeedback.quality,
+            activityMode: lastSampleFeedback.activityMode,
+            reason: lastSampleFeedback.rejectionReason || undefined,
+            aggregated: receivedCount > 1
+          });
+        }
+      }
+      if (receivedSamples) {
+        if (!strict && t.id === aktivTurId && t.status === "aktiv") {
+          for (const measurement of overlapMeasurements) {
+            registrerSurveyOverlap(
+              t,
+              measurement.overlapDistanceMeters || 0,
+              measurement.overlapPercent || 0
+            );
+          }
+        }
+        surveyLog("BACKGROUND_SYNC_APPLIED", { surveyId: t.id, samples: receivedCount });
+        if (t.id === aktivTurId) {
+          if (stille()) oppdaterSpar();
+          else { gjenopprettKart(); oppdaterSurveyDashboard(); }
+        }
+      }
+      return true;
+    } catch (error) {
+      if (surveyStore.kind === "native-sqlite") melding("Kunne ikke synkronisere bakgrunnssporet", 3500);
+      if (strict) throw error;
+      return false;
+    } finally {
+      if (bulkActive && bulkEngine && bulkEngine.isBulkActive()) {
+        // Ikke la en avbrutt database-side låse motoren i bulkmodus. Den
+        // staged geometrien er fortsatt gyldig og blir slått sammen én gang.
+        try { await bulkEngine.endBulkAsync(); }
+        catch (bulkError) {
+          surveyLog("BULK_RECOVERY_FINALIZE_FAILED", {
+            surveyId: t.id,
+            message: String(bulkError && bulkError.message || bulkError)
+          });
+        }
+      }
+      surveySyncing = false;
+      surveySyncTargetId = null;
+    }
+  })();
+  return surveySyncPromise;
+}
+
+async function synkSurveyHelt(t, latestSequence) {
+  await surveySampleQueue;
+  if (surveySyncing) await surveySyncPromise;
+  await synkSurveySamples(t, true);
+  const latest = Math.max(0, +latestSequence || +t.nativeLatestSequence || 0);
+  if (latest && (+t.nativeCursor || 0) < latest) await synkSurveySamples(t, true);
+  if (latest && (+t.nativeCursor || 0) < latest) {
+    throw new Error(`Survey-sync stoppet ved ${t.nativeCursor || 0}, forventet ${latest}`);
+  }
+  t.nativeSyncPending = false;
+  return true;
+}
+
+async function startSurvey(profileId, areaId) {
+  if (surveyLifecycleDestructive) { melding("En survey-sletting pågår …"); return; }
+  if (surveyNativeRecoveryRunning) { melding("Avstemmer bakgrunnssporingen …"); return; }
+  if (aktivTur()) return;
+  const profile = SURVEY.COVERAGE_PROFILES[profileId] || SURVEY.COVERAGE_PROFILES.THOROUGH;
+  const model = SURVEY.createSurvey({ coverageProfile: profile.id, areaId: areaId || null });
+  const t = {
+    id: model.id, kind: "survey", t0: model.startedAt, t1: null, status: "aktiv",
+    distanse: 0, spor: [], sesong: new Date(model.startedAt).getFullYear(), pauseMs: 0, pauseStart: null,
+    areaId: model.areaId, searchRadiusMeters: model.searchRadiusMeters,
+    coverageProfile: model.coverageProfile, currentActivity: model.currentActivity,
+    surveyPoints: [], nativeCursor: 0, coverageCache: null, statistics: model.statistics,
+    surveyPointsBaseCount: 0, coverageAnchor: null,
+    nativeLatestSequence: 0, nativeStateRevision: 0,
+    nativeSessionCreated: false, nativeSyncPending: false,
+    nativeGpsIssueCode: null, nativeGpsIssueMessage: null,
+    targetGeometry: null, targetName: "", targetSnapshotAt: null,
+    targetExclusions: [], ignoredHoleIds: [], rawSampleCount: 0, rejectedSampleCount: 0,
+    surveyTransitioning: true, surveyFinalizing: false
+  };
+  const previousViewId = visTurId;
+  const previousYear = S.aar;
+  const previousTrackMode = S.sporModus;
+  settSurveyMaal(t, model.areaId);
+  turer.push(t); aktivTurId = t.id; visTurId = t.id; spor = t.spor; distanse = 0;
+  surveyNativeTransitionGeneration++;
+  S.aar = String(t.sesong); S.sporModus = "gaa";
+  surveyEngine = null; surveyEngineId = null; surveyPreviousAccepted = null;
+  surveyOverlapVindu = [];
+  surveySistVarslet = 0; surveyPoorSince = null; surveyPoorVarslet = false;
+  try {
+    // Metadataen er det eneste som knytter et append-only råspor til valgt
+    // radius og målområde. Ikke start native/IDB-sporing før dette snapshotet
+    // er bekreftet lagret.
+    await lagreNaStrict();
+  } catch (error) {
+    turer = turer.filter(x => x.id !== t.id);
+    aktivTurId = null;
+    visTurId = previousViewId;
+    S.aar = previousYear;
+    S.sporModus = previousTrackMode;
+    surveyEngine = null; surveyEngineId = null; surveyPreviousAccepted = null;
+    settVistTur(previousViewId, false);
+    const previousView = vistTur();
+    if (erSurvey(previousView)) { sikreSurveyEngine(previousView); await beregnSurveyAvledet(previousView, false); }
+    else tegnSurveyLag(null);
+    fyllAar(); fyllLister(); oppdaterTurUI(); oppdaterHud();
+    melding("Undersøkelsen ble ikke startet fordi øktdata ikke kunne lagres", 5200);
+    return;
+  }
+  settVistTur(t.id, false); fyllAar(); oppdaterTurUI();
+  tegnSurveyLag(t, t.statistics, { coverage: null, uncertainCoverage: null });
+  beregnSurveyAvledet(t, true);
+  if (surveyStore.kind === "native-sqlite") {
+    let startSucceeded = false;
+    try {
+      const startedState = await startEllerGjenopptaSurveyNative(t);
+      avstemSurveyPauseFraNative(t, startedState);
+      // Forsvar også direkte/programmatisk fullføring mens tillatelsesdialogen
+      // står åpen. En sen native start skal aldri bli en foreldreløs FGS.
+      if (aktivTurId !== t.id || t.status !== "aktiv" || t.t1) {
+        await surveyStore.stop({ surveyId: t.id }).catch(() => {});
+        return;
+      }
+      startSucceeded = true;
+    } catch (error) {
+      const reconciled = await avstemSurveyEtterTvetydigNativeSvar(t, "START_STATE_UNCERTAIN");
+      if (reconciled.known && reconciled.status === "ACTIVE") {
+        startSucceeded = true;
+      } else if (reconciled.status !== "COMPLETED") {
+        if (reconciled.known && reconciled.status !== "MISSING") {
+          t.status = "pauset";
+          t.pauseStart = t.pauseStart || Date.now();
+        }
+        if (reconciled.known && nativ) startNativ();
+        ingenGps(reconciled.known
+          ? "Bakgrunnssporing kunne ikke startes. Kontroller posisjons- og varseltillatelsene."
+          : "Kunne ikke bekrefte om bakgrunnssporingen startet. Status avstemmes på nytt.");
+      }
+    } finally {
+      t.surveyTransitioning = false;
+      await lagreNa(); oppdaterTurUI(); oppdaterSurveyDashboard();
+    }
+    if (!startSucceeded) return;
+    setTimeout(() => {
+      if (aktivTurId === t.id && t.status === "aktiv" && !t.t1) synkSurveySamples(t);
+    }, 1000);
+  } else {
+    t.surveyTransitioning = false;
+  }
+  surveyLog("SURVEY_STARTED", { surveyId: t.id, areaId: t.areaId, searchRadiusMeters: t.searchRadiusMeters });
+  lukkArk(); lukkMenyer();
+  melding(`Undersøkelse startet · ${profile.label.toLowerCase()} (${profile.radiusMeters} m)`, 3800);
+}
+
+function visSurveyOppsett(profileId, areaId) {
+  const chosenProfile = profileId || "THOROUGH";
+  const chosenArea = areaId == null ? "" : String(areaId);
+  visArk(`<h4>Undersøk område</h4>
+    <p class="ark-hjelp">Velg hvor bred korridor som regnes som faktisk undersøkt. Dette er ikke GPS-nøyaktigheten.</p>
+    <div class="valg">
+      ${Object.values(SURVEY.COVERAGE_PROFILES).map(profile => `<button data-survey-profile="${profile.id}" class="${profile.id === chosenProfile ? "valgt" : ""}">${profile.label}<small>${profile.radiusMeters} meter</small></button>`).join("")}
+    </div>
+    <h4 style="margin-top:20px">Målområde</h4>
+    <div class="valg">
+      <button data-survey-area="" class="${chosenArea === "" ? "valgt" : ""}">Uten polygon<small>Begynn å gå med en gang</small></button>
+      ${soner.map(area => `<button data-survey-area="${escHtml(area.id)}" class="${chosenArea === String(area.id) ? "valgt" : ""}">${escHtml(area.navn)}<small>Lagret område</small></button>`).join("")}
+    </div>
+    <div class="to" style="margin-top:14px"><button id="akAvbryt">Avbryt</button><button class="primar" id="akStartSurvey">Start undersøkelse</button></div>`);
+  document.querySelectorAll("[data-survey-profile]").forEach(button => {
+    button.onclick = () => visSurveyOppsett(button.dataset.surveyProfile, chosenArea);
+  });
+  document.querySelectorAll("[data-survey-area]").forEach(button => {
+    button.onclick = () => visSurveyOppsett(chosenProfile, button.dataset.surveyArea);
+  });
+  document.getElementById("akAvbryt").onclick = lukkArk;
+  document.getElementById("akStartSurvey").onclick = () => startSurvey(chosenProfile, chosenArea || null);
+}
+
+function visStartvalg() {
+  visArk(`<h4>Hva vil du gjøre?</h4>
+    <div class="valg">
+      <button id="akVanligTur">Vanlig tur<small>Spor tur, aktivitet og funn som før</small></button>
+      <button id="akSurvey">Undersøk område<small>Se unik dekning og uundersøkte hull</small></button>
+    </div><div class="to ark-avbryt"><button id="akAvbryt">Avbryt</button></div>`);
+  document.getElementById("akVanligTur").onclick = () => visModusvalg(true);
+  document.getElementById("akSurvey").onclick = () => visSurveyOppsett();
+  document.getElementById("akAvbryt").onclick = lukkArk;
+}
+
+function visSurveyOmradevalg() {
+  const t = aktivSurvey();
+  if (!t) return;
+  visArk(`<h4>Velg målområde</h4><div class="valg">
+    <button data-velg-survey-area="">Uten polygon</button>
+    ${soner.map(area => `<button data-velg-survey-area="${escHtml(area.id)}" class="${String(t.areaId || "") === String(area.id) ? "valgt" : ""}">${escHtml(area.navn)}</button>`).join("")}
+    </div><div class="to ark-avbryt"><button id="akAvbryt">Avbryt</button></div>`);
+  document.querySelectorAll("[data-velg-survey-area]").forEach(button => {
+    button.onclick = async () => {
+      settSurveyMaal(t, button.dataset.velgSurveyArea || null); lukkArk();
+      surveyHoleCandidates = []; surveyHoleIndex = -1; surveyHjelpLag.clearLayers();
+      await beregnSurveyAvledet(t, false); await lagreNa();
+      melding(t.areaId ? "Målområde valgt" : "Survey fortsetter uten målområde");
+    };
+  });
+  document.getElementById("akAvbryt").onclick = lukkArk;
+}
+
+async function settSurveyAktivitet(activity) {
+  const t = aktivSurvey();
+  if (surveyLifecycleDestructive) { melding("En survey-sletting pågår …"); return; }
+  if (surveyNativeRecoveryRunning) { melding("Avstemmer bakgrunnssporingen …"); return; }
+  if (!t || t.status !== "aktiv" || t.surveyTransitioning || t.surveyFinalizing) return;
+  const nextActivity = SURVEY.normalizeActivity(activity);
+  if (nextActivity === t.currentActivity) return;
+  t.surveyTransitioning = true;
+  surveyNativeTransitionGeneration++;
+  oppdaterTurUI(); oppdaterSurveyDashboard();
+  try {
+    await surveySampleQueue;
+    if (surveySyncing) await surveySyncPromise;
+    if (t !== aktivSurvey() || t.status !== "aktiv" || t.surveyFinalizing) return;
+    if (surveyStore.kind === "native-sqlite") {
+      try {
+        const changed = await surveyStore.setActivity({ surveyId: t.id, activityMode: nextActivity });
+        const changedState = nativeSurveyState(changed) || changed;
+        oppdaterSurveyNativeRevision(t, changedState);
+      } catch (error) {
+        const reconciled = await avstemSurveyEtterTvetydigNativeSvar(t, "ACTIVITY_STATE_UNCERTAIN");
+        if (!reconciled.known) {
+          melding("Kunne ikke bekrefte aktivitetsendringen", 4200);
+          return;
+        }
+        const authoritativeActivity = reconciled.state &&
+          SURVEY.normalizeActivity(reconciled.state.activity || reconciled.state.activityMode);
+        if (reconciled.status !== "ACTIVE" || authoritativeActivity !== nextActivity) {
+          melding(reconciled.status === "COMPLETED"
+            ? "Undersøkelsen var allerede avsluttet"
+            : "Aktiviteten ble ikke endret i bakgrunnssporingen", 4200);
+          return;
+        }
+      }
+    }
+    t.currentActivity = nextActivity;
+    surveyOverlapVindu = [];
+    S.sporModus = surveyModusTilSpor(t.currentActivity);
+    try { await beregnSurveyAvledet(t, true); }
+    catch (geometryError) {
+      surveyLog("RECOVERY_DERIVED_FAILED", {
+        surveyId: t.id,
+        message: String(geometryError && geometryError.message || geometryError)
+      });
+    }
+    if (t.id === visTurId) tegnSpor();
+    surveyLog("ACTIVITY_CHANGED", { surveyId: t.id, activityMode: t.currentActivity });
+    await lagreNa();
+    melding(`Aktivitet: ${surveyAktivitetsnavn(t.currentActivity)}`);
+  } catch (error) {
+    melding("Kunne ikke endre aktiviteten i bakgrunnssporingen", 4200);
+  } finally {
+    t.surveyTransitioning = false;
+    oppdaterTurUI(); oppdaterSurveyDashboard();
+  }
+}
+
+function visSurveyAktivitet() {
+  const t = aktivSurvey();
+  if (!t) return;
+  visArk(`<h4>Velg aktivitet</h4><div class="valg">
+    <button data-velg-survey-mode="SEARCHING">Undersøker<small>Track og dekning</small></button>
+    <button data-velg-survey-mode="PICKING">Plukker<small>Track, dekning og plukksegment</small></button>
+    <button data-velg-survey-mode="TRANSPORT">Transport<small>Track uten dekning</small></button>
+    </div><div class="to ark-avbryt"><button id="akAvbryt">Avbryt</button></div>`);
+  document.querySelectorAll("[data-velg-survey-mode]").forEach(button => {
+    button.onclick = () => { lukkArk(); settSurveyAktivitet(button.dataset.velgSurveyMode); };
+  });
+  document.getElementById("akAvbryt").onclick = lukkArk;
+}
+
+function registrerSurveyFunn() {
+  const t = aktivSurvey();
+  if (t && t.nativeStateUncertain) { melding("Venter på bekreftet bakgrunnsstatus"); return; }
+  if (!t || !posisjon) { melding("Venter på GPS-posisjon"); return; }
+  const choices = [
+    ["NONE", "Ingen", "#8A9490"], ["LOW", "Lite", "#D9A441"],
+    ["GOOD", "Bra", "#7A8A5E"], ["HIGH", "Mye", "#667BC1"]
+  ];
+  visArk(`<h4>Registrer funn</h4><p class="ark-hjelp">Lagres på posisjonen din nå.</p>
+    <div class="valg survey-rating">${choices.map(([id, label, color]) => `<button data-survey-rating="${id}"><span class="rating-dot" style="background:${color}"></span>${label}</button>`).join("")}</div>
+    <div class="to ark-avbryt"><button id="akAvbryt">Avbryt</button></div>`);
+  document.querySelectorAll("[data-survey-rating]").forEach(button => {
+    button.onclick = () => {
+      surveyObservasjoner.push({
+        id: "obs-" + Date.now().toString(36), surveyId: t.id,
+        lat: posisjon.lat, lng: posisjon.lng, timestamp: Date.now(), rating: button.dataset.surveyRating
+      });
+      lukkArk(); tegnSurveyFunn(t); lagreNa();
+      if (navigator.vibrate) navigator.vibrate(35);
+      melding("Funn registrert");
+    };
+  });
+  document.getElementById("akAvbryt").onclick = lukkArk;
+}
+
+function visSurveyHull(index) {
+  const t = aktivSurvey();
+  if (!t || !surveyHoleCandidates.length) { melding("Ingen relevante uundersøkte hull funnet"); return; }
+  surveyHoleIndex = (index + surveyHoleCandidates.length) % surveyHoleCandidates.length;
+  const hole = surveyHoleCandidates[surveyHoleIndex];
+  surveyHjelpLag.clearLayers();
+  L.geoJSON(hole.geometry, { pane: "surveyAssistPane", style: {
+    color: "#C67139", weight: 4, fillColor: "#D9A441", fillOpacity: .22
+  } }).addTo(surveyHjelpLag);
+  L.circleMarker([hole.centroid.lat, hole.centroid.lng], {
+    pane: "surveyAssistPane", radius: 8, color: "#F9F4ED", weight: 3,
+    fillColor: "#C67139", fillOpacity: 1
+  }).addTo(surveyHjelpLag);
+  map.panTo([hole.centroid.lat, hole.centroid.lng]);
+  const hasDirection = Number.isFinite(hole.distanceFromUserMeters) && Number.isFinite(hole.bearingFromUserDegrees);
+  const direction = hasDirection ? HIMMEL[Math.round(hole.bearingFromUserDegrees / 45) % 8] : null;
+  const guidance = hasDirection
+    ? `${Math.round(hole.distanceFromUserMeters)} m ${direction}`
+    : "Avstand ukjent — venter på GPS";
+  visArk(`<h4>Neste område</h4>
+    <p class="ark-hjelp"><b>${guidance}</b><br>${formatSurveyAreal(hole.areaSquareMeters)} uundersøkt</p>
+    <div class="to"><button id="akNesteHull">Neste</button><button class="fare" id="akIgnorerHull">Ignorer området</button></div>
+    <div class="to ark-avbryt"><button id="akLukkHull">Lukk</button></div>`);
+  document.getElementById("akNesteHull").onclick = () => visSurveyHull(surveyHoleIndex + 1);
+  document.getElementById("akIgnorerHull").onclick = async () => {
+    t.ignoredHoleIds = Array.from(new Set([...(t.ignoredHoleIds || []), hole.id]));
+    if (surveyOmradeGeoJson(t)) leggTilSurveyEksklusjon(t, {
+      id: "skip-" + Date.now().toString(36), surveyId: t.id, surveyAreaId: t.areaId,
+      geometry: hole.geometry, reason: "SKIPPED", createdAt: Date.now()
+    });
+    await beregnSurveyAvledet(t, false); await lagreNa();
+    if (t !== aktivSurvey()) return;
+    if (surveyHoleCandidates.length) visSurveyHull(Math.min(surveyHoleIndex, surveyHoleCandidates.length - 1));
+    else { lukkArk(); surveyHjelpLag.clearLayers(); melding("Ingen flere relevante hull"); }
+  };
+  document.getElementById("akLukkHull").onclick = () => { lukkArk(); surveyHjelpLag.clearLayers(); };
+}
+
+async function finnNesteSurveyHull() {
+  const t = aktivSurvey();
+  if (!t) return;
+  if (!surveyOmradeGeoJson(t)) { visSurveyOmradevalg(); return; }
+  if (!posisjon) { melding("Venter på GPS-posisjon"); return; }
+  await beregnSurveyAvledet(t, false);
+  if (t !== aktivSurvey()) return;
+  visSurveyHull(0);
+}
+
+async function synkVentendeSurveyer() {
+  if (surveyStore.kind !== "native-sqlite") return;
+  await surveySampleQueue;
+  if (surveySyncing) await surveySyncPromise.catch(() => false);
+  let changed = false;
+  for (const t of turer.filter(x => erSurvey(x) && x.nativeSyncPending)) {
+    if (surveySyncBlockedIds.has(String(t.id))) continue;
+    try {
+      const response = await surveyStore.getState({ surveyId: t.id });
+      if (surveySyncBlockedIds.has(String(t.id)) || t.surveyTransitioning || t.surveyFinalizing) continue;
+      const state = nativeSurveyState(response);
+      if (!state) {
+        if (t.id === aktivTurId) markerSurveyNativeMangler(t);
+        else {
+          t.nativeSessionCreated = false;
+          t.nativeLatestSequence = 0;
+          t.nativeCursor = 0;
+          t.nativeSyncPending = false;
+        }
+        changed = true;
+        continue;
+      }
+      t.nativeLatestSequence = Math.max(0, +(state && state.latestSequence) || +t.nativeLatestSequence || 0);
+      surveyEngine = null; surveyEngineId = null; surveyPreviousAccepted = null;
+      sikreSurveyEngine(t);
+      await synkSurveyHelt(t, t.nativeLatestSequence);
+      changed = true;
+    } catch (error) {
+      if (!surveySyncBlockedIds.has(String(t.id))) t.nativeSyncPending = true;
+    }
+  }
+  surveyEngine = null; surveyEngineId = null; surveyPreviousAccepted = null;
+  const current = aktivSurvey();
+  if (current) sikreSurveyEngine(current);
+  if (changed) await lagreNa();
+}
+
+async function blokkerOgVentSurveySync(t) {
+  const id = String(t.id);
+  surveySyncBlockedIds.add(id);
+  try {
+    await surveySampleQueue;
+    if (surveySyncing) await surveySyncPromise.catch(() => false);
+  } catch (error) {
+    surveySyncBlockedIds.delete(id);
+    throw error;
+  }
+  return () => surveySyncBlockedIds.delete(id);
+}
+
+async function slettSurveyPersistensIdempotent(t) {
+  try {
+    await surveyStore.deleteSurvey(t.id);
+    return;
+  } catch (deleteError) {
+    if (surveyStore.kind !== "native-sqlite") throw deleteError;
+    let scopedReadSucceeded = false;
+    let scopedState = null;
+    try {
+      scopedState = nativeSurveyState(await surveyStore.getState({ surveyId: t.id }));
+      scopedReadSucceeded = true;
+    } catch (ignored) { /* den opprinnelige slettefeilen er autoritativ */ }
+    // Native sletting kan ha blitt committet før bridge-svaret forsvant. At en
+    // presis etterlesing bekrefter manglende rad gjør gjentatt sletting trygg.
+    if (!scopedReadSucceeded || scopedState) throw deleteError;
+  }
+}
+
+async function slettSurveyRaadataIdempotent(t) {
+  if (surveyStore.kind !== "native-sqlite") {
+    await surveyStore.deleteSamples(t.id);
+    return;
+  }
+  const before = nativeSurveyState(await surveyStore.getState({ surveyId: t.id }));
+  if (!before) return;
+  try {
+    await surveyStore.deleteSamples(t.id);
+  } catch (deleteError) {
+    let readSucceeded = false;
+    let after = null;
+    try {
+      after = nativeSurveyState(await surveyStore.getState({ surveyId: t.id }));
+      readSucceeded = true;
+    } catch (ignored) { /* den opprinnelige slettefeilen er autoritativ */ }
+    const terminalAndEmpty = after &&
+      String(after.status || "").toUpperCase() === "COMPLETED" &&
+      Math.max(0, +after.latestSequence || 0) === 0 &&
+      Math.max(0, +after.rawSampleCount || 0) === 0 &&
+      Math.max(0, +after.acceptedSampleCount || 0) === 0;
+    if (!readSucceeded || (after && !terminalAndEmpty)) throw deleteError;
+  }
+}
+
+function nullstillSurveyRecoveryRetry() {
+  if (surveyRecoveryRetryTimer != null) clearTimeout(surveyRecoveryRetryTimer);
+  surveyRecoveryRetryTimer = null;
+  surveyRecoveryRetryAttempts = 0;
+}
+
+function surveyRecoveryOvergangPaagaar(t) {
+  return !!(t && (t.surveyTransitioning || t.surveyFinalizing));
+}
+
+function planleggSurveyRecoveryRetry() {
+  const t = aktivSurvey();
+  if (surveyLifecycleDestructive || surveyStore.kind !== "native-sqlite" || !t || !t.nativeStateUncertain ||
+      surveyRecoveryRetryTimer != null || surveyRecoveryRetryAttempts >= 3) return;
+  const retrySurveyId = String(t.id);
+  const delays = [1500, 5000, 15000];
+  const delay = delays[surveyRecoveryRetryAttempts++];
+  surveyRecoveryRetryTimer = setTimeout(() => {
+    surveyRecoveryRetryTimer = null;
+    const reconcile = async () => {
+      let deferredForTransition = false;
+      try {
+        const current = aktivSurvey();
+        if (!current || String(current.id) !== retrySurveyId || !current.nativeStateUncertain) return;
+        if (surveyRecoveryOvergangPaagaar(current)) {
+          deferredForTransition = true;
+          return;
+        }
+        await gjenopprettSurveySession();
+      }
+      finally {
+        const current = aktivSurvey();
+        const sameSurvey = !!(current && String(current.id) === retrySurveyId);
+        if (deferredForTransition && sameSurvey && current.nativeStateUncertain) {
+          // En pågående overgang skal ikke bruke opp dette begrensede forsøket.
+          surveyRecoveryRetryAttempts = Math.max(0, surveyRecoveryRetryAttempts - 1);
+        } else if (current && !sameSurvey) {
+          // En ny økt får sin egen retry-kvote; den gamle timeren må ikke arves.
+          surveyRecoveryRetryAttempts = 0;
+        }
+        if (current && current.nativeStateUncertain) planleggSurveyRecoveryRetry();
+        else nullstillSurveyRecoveryRetry();
+      }
+    };
+    surveyVisibilitySyncPromise = surveyVisibilitySyncPromise.then(reconcile, reconcile);
+  }, delay);
+}
+
+async function fullforGjenopprettetSurvey(t, state) {
+  t.nativeSessionCreated = true;
+  t.nativeLatestSequence = Math.max(0, +(state && state.latestSequence) || +t.nativeLatestSequence || 0);
+  avstemSurveyPauseFraNative(t, state);
+  const endedAt = +(state && (state.endedAt || state.updatedAt));
+  t.t1 = Number.isFinite(endedAt) && endedAt > 0 ? endedAt : Date.now();
+  t.status = "avsluttet";
+  t.surveyStatus = "COMPLETED";
+  t.pauseStart = null;
+  t.surveyFinalizing = false;
+  t.surveyTransitioning = false;
+  try {
+    surveyEngine = null; surveyEngineId = null; surveyPreviousAccepted = null;
+    sikreSurveyEngine(t);
+    await synkSurveyHelt(t, t.nativeLatestSequence);
+  } catch (error) {
+    t.nativeSyncPending = true;
+    surveyLog("FINAL_SYNC_DEFERRED", { surveyId: t.id, latestSequence: t.nativeLatestSequence });
+  }
+  try { await beregnSurveyAvledet(t, true, true); }
+  catch (geometryError) {
+    surveyLog("FINAL_DERIVED_FAILED", { surveyId: t.id, message: String(geometryError && geometryError.message || geometryError) });
+  }
+  if (aktivTurId === t.id) aktivTurId = null;
+  visTurId = t.id; spor = t.spor; distanse = t.distanse;
+  surveyLog("SURVEY_COMPLETED_RECOVERED", { surveyId: t.id, latestSequence: t.nativeLatestSequence });
+  await lagreNa();
+}
+
+async function gjenopprettSurveySessionUlaast() {
+  const initialSurvey = aktivSurvey();
+  if (surveyNativeRecoveryRunning || surveyRecoveryOvergangPaagaar(initialSurvey)) return false;
+  surveyNativeRecoveryRunning = true;
+  const recoveryGeneration = ++surveyNativeTransitionGeneration;
+  const recoveryStillCurrent = () => recoveryGeneration === surveyNativeTransitionGeneration &&
+    !surveyLifecycleDestructive;
+  try {
+  let t = initialSurvey;
+  if (surveyStore.kind === "native-sqlite") {
+    try {
+      let response = await surveyStore.getState();
+      if (!recoveryStillCurrent()) return false;
+      let state = nativeSurveyState(response);
+      // getState() uten id viser bare en åpen økt. Et lokalt aktivt objekt kan
+      // allerede være terminalt native dersom prosessen døde etter stop-commit.
+      if (!state && t) {
+        response = await surveyStore.getState({ surveyId: t.id });
+        if (!recoveryStillCurrent()) return false;
+        state = nativeSurveyState(response);
+      }
+      const nativeId = state && (state.sessionId || state.surveyId || state.id);
+      const nativeStatus = String((state && state.status) || "").toUpperCase();
+      if (t && nativeId && String(nativeId) === String(t.id) && nativeStatus === "COMPLETED") {
+        await fullforGjenopprettetSurvey(t, state);
+        t = null;
+      } else if (nativeId && (nativeStatus === "ACTIVE" || nativeStatus === "PAUSED")) {
+        t = turer.find(x => x.id === String(nativeId)) || null;
+        if (!t) {
+          const model = SURVEY.createSurvey({
+            id: String(nativeId), startedAt: +(state.startedAt || Date.now()),
+            searchRadiusMeters: +(state.searchRadiusMeters || 5),
+            currentActivity: state.activity || state.activityMode || "SEARCHING"
+          });
+          t = {
+            id: model.id, kind: "survey", t0: model.startedAt, t1: null,
+            status: nativeStatus === "PAUSED" ? "pauset" : "aktiv",
+            distanse: +(state.distanceMeters || 0), spor: [], sesong: new Date(model.startedAt).getFullYear(),
+            pauseMs: 0, pauseStart: null,
+            areaId: null, searchRadiusMeters: model.searchRadiusMeters,
+            coverageProfile: model.coverageProfile, currentActivity: SURVEY.normalizeActivity(state.activity || state.activityMode),
+            surveyPoints: [], nativeCursor: 0, coverageCache: null, statistics: model.statistics,
+            surveyPointsBaseCount: 0, coverageAnchor: null,
+            nativeLatestSequence: Math.max(0, +(state.latestSequence || 0)),
+            nativeStateRevision: Math.max(0, +(state.stateRevision || 0)),
+            nativeSessionCreated: true, nativeSyncPending: false,
+            nativeGpsIssueCode: null, nativeGpsIssueMessage: null,
+            targetGeometry: null, targetName: "", targetSnapshotAt: null, targetExclusions: [],
+            ignoredHoleIds: [], rawSampleCount: 0, rejectedSampleCount: 0,
+            surveyTransitioning: false, surveyFinalizing: false
+          };
+          turer.push(t);
+        }
+        const appliedStatus = await anvendSurveyNativeState(t, state);
+        if (!recoveryStillCurrent() || appliedStatus === "STALE") return false;
+        aktivTurId = t.id; visTurId = t.id; spor = t.spor; distanse = t.distanse;
+        S.sporModus = surveyModusTilSpor(t.currentActivity);
+        surveyOverlapVindu = []; surveySistVarslet = 0;
+        surveyPoorSince = null; surveyPoorVarslet = false;
+        if (nativeStatus === "ACTIVE") {
+          // Idempotent native resume reaktiverer FGS etter synlig appåpning.
+          try {
+            const resumed = await surveyStore.resume({ surveyId: t.id });
+            if (!recoveryStillCurrent()) return false;
+            await anvendSurveyNativeState(t, nativeSurveyState(resumed) || resumed);
+          } catch (resumeError) {
+            try {
+              const paused = await surveyStore.pause({ surveyId: t.id });
+              if (!recoveryStillCurrent()) return false;
+              await anvendSurveyNativeState(t, nativeSurveyState(paused) || paused);
+            } catch (ignored) { /* best effort */ }
+            throw resumeError;
+          }
+        }
+      } else if (t && (t.status === "aktiv" || t.status === "pauset")) {
+        // Et autoritativt, scope-et null-svar betyr at både økt og sekvensrom
+        // mangler native. Nullstill cursor før en eventuell reparert start.
+        markerSurveyNativeMangler(t);
+      }
+    } catch (error) {
+      if (t && (t.status === "aktiv" || t.status === "pauset")) {
+        try {
+          const paused = await surveyStore.pause({ surveyId: t.id });
+          if (!recoveryStillCurrent()) return false;
+          await anvendSurveyNativeState(t, nativeSurveyState(paused) || paused);
+        } catch (pauseError) {
+          const reconciled = await avstemSurveyEtterTvetydigNativeSvar(t, "RECOVERY_STATE_UNCERTAIN");
+          if (!recoveryStillCurrent()) return false;
+          if (!reconciled.known || reconciled.status === "ACTIVE" || reconciled.status === "UNKNOWN") {
+            // En lesbar ACTIVE-rad beviser økten, men ikke at FGS-reparasjonen
+            // lyktes. Fortsett begrenset retry i stedet for å påstå pause.
+            markerSurveyNativeUsikker(t, "RECOVERY_PAUSE_UNCERTAIN");
+          }
+        }
+      }
+    }
+  }
+  t = aktivSurvey();
+  if (t) {
+    sikreSurveyEngine(t);
+    if (!t.nativeStateUncertain) {
+      try {
+        await synkSurveyHelt(t, t.nativeLatestSequence);
+      } catch (error) {
+        if (surveyStore.kind === "native-sqlite") t.nativeSyncPending = true;
+      }
+    }
+    await beregnSurveyAvledet(t, true);
+    await lagreNa();
+  }
+  if (t && t.nativeStateUncertain) planleggSurveyRecoveryRetry();
+  else nullstillSurveyRecoveryRetry();
+  return true;
+  } finally {
+    surveyNativeRecoveryRunning = false;
+    oppdaterTurUI();
+    oppdaterSurveyDashboard();
+  }
+}
+
+function gjenopprettSurveySession() {
+  if (surveyLifecycleDestructive) return Promise.resolve(false);
+  const recover = async () => {
+    if (surveyLifecycleDestructive) return false;
+    return gjenopprettSurveySessionUlaast();
+  };
+  const current = surveyRecoveryPromise.then(recover, recover);
+  surveyRecoveryPromise = current.catch(() => {});
+  return current;
+}
+
+async function begynnSurveyDestruktivLivssyklus() {
+  const active = aktivSurvey();
+  if (surveyLifecycleDestructive || surveyRecoveryOvergangPaagaar(active)) return false;
+  surveyLifecycleDestructive = true;
+  // Gjør eventuelle eldre poll-/recovery-svar foreldet før slettingen leser
+  // og fjerner native økter. Nye transitions avvises av lifecycle-flagget.
+  surveyNativeTransitionGeneration++;
+  nullstillSurveyRecoveryRetry();
+  await surveyRecoveryPromise.catch(() => {});
+  return true;
+}
+
+function avsluttSurveyDestruktivLivssyklus() {
+  surveyLifecycleDestructive = false;
+}
+
+let surveyNativeStatePollRunning = false;
+async function avstemAktivSurveyNativeUlaast(t) {
+  if (surveyLifecycleDestructive || !t || t !== aktivSurvey() ||
+      t.surveyTransitioning || t.surveyFinalizing || surveySyncBlockedIds.has(String(t.id))) return null;
+  const beforeStatus = t.status;
+  const beforeActivity = t.currentActivity;
+  const beforeLatest = +t.nativeLatestSequence || 0;
+  const beforeCursor = +t.nativeCursor || 0;
+  const beforeCreated = !!t.nativeSessionCreated;
+  const beforeGpsIssue = t.nativeGpsIssueCode || null;
+  const requestedGeneration = surveyNativeTransitionGeneration;
+  try {
+    const state = nativeSurveyState(await surveyStore.getState({ surveyId: t.id }));
+    if (requestedGeneration !== surveyNativeTransitionGeneration || surveyLifecycleDestructive ||
+        !t || t !== aktivSurvey() || t.surveyTransitioning || t.surveyFinalizing ||
+        surveySyncBlockedIds.has(String(t.id))) return null;
+    const status = await anvendSurveyNativeState(t, state);
+    if (status === "STALE") return { known: true, status, state, changed: false };
+    if (status === "PAUSED" && beforeStatus === "aktiv") {
+      emitSurveyEvent("BACKGROUND_TRACKING_PAUSED", { surveyId: t.id, error: state && state.lastError || null });
+      melding("Bakgrunnssporingen ble pauset — åpne undersøkelsen for å fortsette", 5200);
+    }
+    const changed = beforeStatus !== t.status || beforeActivity !== t.currentActivity ||
+      beforeLatest !== (+t.nativeLatestSequence || 0) || beforeCursor !== (+t.nativeCursor || 0) ||
+      beforeCreated !== !!t.nativeSessionCreated || beforeGpsIssue !== (t.nativeGpsIssueCode || null);
+    return { known: true, status, state, changed };
+  } catch (error) {
+    if (requestedGeneration !== surveyNativeTransitionGeneration || surveyLifecycleDestructive ||
+        !t || t !== aktivSurvey() || t.surveyTransitioning || t.surveyFinalizing ||
+        surveySyncBlockedIds.has(String(t.id))) return null;
+    markerSurveyNativeUsikker(t, "STATE_POLL_UNCERTAIN");
+    return { known: false, status: "UNKNOWN", state: null, changed: true };
+  }
+}
+
+function avstemAktivSurveyNative(t) {
+  if (surveyLifecycleDestructive) return Promise.resolve(null);
+  const reconcile = () => avstemAktivSurveyNativeUlaast(t);
+  const current = surveyRecoveryPromise.then(reconcile, reconcile);
+  surveyRecoveryPromise = current.catch(() => {});
+  return current;
+}
+
+async function pollSurveyNativeState() {
+  if (surveyNativeStatePollRunning || surveyLifecycleDestructive || surveyStore.kind !== "native-sqlite") return;
+  const t = aktivSurvey();
+  if (!t || t.surveyTransitioning || t.surveyFinalizing) return;
+  surveyNativeStatePollRunning = true;
+  try {
+    const reconciled = await avstemAktivSurveyNative(t);
+    if (!reconciled || !reconciled.known || reconciled.status === "COMPLETED" || t !== aktivSurvey()) return;
+    let synced = false;
+    if (!t.nativeStateUncertain && (+t.nativeCursor || 0) < (+t.nativeLatestSequence || 0)) {
+      synced = await synkSurveySamples(t);
+      if ((+t.nativeCursor || 0) >= (+t.nativeLatestSequence || 0)) t.nativeSyncPending = false;
+    }
+    if (reconciled.changed || synced) await lagreNa();
+  } finally {
+    surveyNativeStatePollRunning = false;
+    const current = aktivSurvey();
+    if (current && current.nativeStateUncertain) planleggSurveyRecoveryRetry();
+    else nullstillSurveyRecoveryRetry();
+  }
+}
+
+document.querySelectorAll("[data-survey-activity]").forEach(button => {
+  button.addEventListener("click", () => settSurveyAktivitet(button.dataset.surveyActivity));
+});
+document.getElementById("btnFinnHull").addEventListener("click", finnNesteSurveyHull);
+document.getElementById("btnSurveyOmrade").addEventListener("click", visSurveyOmradevalg);
+document.getElementById("btnSurveyFunn").addEventListener("click", registrerSurveyFunn);
+setInterval(() => {
+  const t = aktivSurvey();
+  if (t && surveyStore.kind === "native-sqlite") pollSurveyNativeState();
+  if (t) oppdaterSurveyDashboard();
+}, 5000);
+
+/* ============================================================
+   8. GPS
    ============================================================ */
 let folg = true, wake = null, gpsSvarte = false;
 
 function start() {
-  if (nativ) return startNativ();
+  if (!map.hasLayer(posSirkel)) posSirkel.addTo(map);
+  if (!map.hasLayer(noySirkel)) noySirkel.addTo(map);
+  if (nativ) {
+    if (surveyStore.kind === "native-sqlite" && aktivSurvey()) return;
+    return startNativ();
+  }
   if (!navigator.geolocation) return ingenGps("Nettleseren tilbyr ikke posisjon.");
   posSirkel.addTo(map); noySirkel.addTo(map);
   navigator.geolocation.watchPosition(fix, feil, { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 });
@@ -1954,15 +4384,19 @@ function fix(pos) {
   sisteFixTid = veggNaa;
   const { latitude: lat, longitude: lng, accuracy: acc, heading: kurs, speed: fart } = pos.coords;
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+  const survey = aktivSurvey();
+  const surveyWebAktiv = !!(survey && survey.status === "aktiv" && surveyStore.kind !== "native-sqlite");
   if (Number.isFinite(kurs) && kurs >= 0 && (!Number.isFinite(fart) || fart >= 0.4) && Date.now() - headingTid > 3000) {
     settHeading(kurs, 0.45);
   }
-  posisjon = L.latLng(lat, lng);
-  posisjon.acc = acc;
-  if (S.lat0 == null) S.lat0 = lat;
+  if (!surveyWebAktiv) {
+    posisjon = L.latLng(lat, lng);
+    posisjon.acc = acc;
+    if (S.lat0 == null) S.lat0 = lat;
+  }
   if (sparPa) blink();
 
-  if (!stille()) {
+  if (!stille() && !surveyWebAktiv) {
     document.getElementById("varsel").classList.remove("vis");
     document.getElementById("chipGps").classList.toggle("svak", acc > S.acc);
     document.getElementById("vGps").textContent = "± " + Math.round(acc) + " m";
@@ -1971,6 +4405,13 @@ function fix(pos) {
     noySirkel.setLatLng([lat, lng]).setRadius(acc);
     if (folg) map.setView([lat, lng], Math.max(map.getZoom(), 16), { animate: true });
     oppdaterKoord();
+  }
+  if (survey && survey.status === "aktiv") {
+    // På Android er samme sample allerede skrevet atomisk til SQLite av
+    // foreground-tjenesten. Nettleserfallbacken appender råpunktet i IndexedDB.
+    if (surveyStore.kind !== "native-sqlite") leggSurveyWebSampleIKo(pos);
+    oppdaterSurveyDashboard();
+    return;
   }
   if (acc > S.acc) return;
 
@@ -2053,10 +4494,29 @@ async function settWake(pa) {
     } else if (wake) { await wake.release(); wake = null; }
   } catch (e) { /* nektet */ }
 }
+async function synkSurveyEtterSynlighet() {
+  const initial = aktivSurvey();
+  if (surveyStore.kind === "native-sqlite" && initial) {
+    // En ny synlighetsperiode får en ny, begrenset retry-serie og en fersk,
+    // autoritativ statuskontroll — også når UI-et tidligere trodde alt var OK.
+    nullstillSurveyRecoveryRetry();
+    const reconciled = await avstemAktivSurveyNative(initial);
+    if (!reconciled || !reconciled.known) return;
+  }
+  if (turer.some(t => erSurvey(t) && t.nativeSyncPending)) await synkVentendeSurveyer();
+  const survey = aktivSurvey();
+  if (survey && !survey.nativeStateUncertain && survey.status === "aktiv" &&
+      !survey.surveyTransitioning && !survey.surveyFinalizing) {
+    await synkSurveySamples(survey);
+  }
+}
+
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") {
     if (S.wake === 1 && !wake) settWake(true);
     if (!sparPa) gjenopprettKart();
+    surveyVisibilitySyncPromise = surveyVisibilitySyncPromise
+      .then(synkSurveyEtterSynlighet, synkSurveyEtterSynlighet);
   } else lagreNa();
 });
 
@@ -2066,7 +4526,21 @@ const nativ = !!(CAPX && CAPX.isNativePlatform && CAPX.isNativePlatform() &&
                  CAPX.isPluginAvailable && CAPX.isPluginAvailable("BackgroundGeolocation"));
 let bgId = null;
 
+async function stoppNativ() {
+  if (!bgId || !CAPX) return;
+  const id = bgId;
+  bgId = null;
+  try {
+    if (CAPX.Plugins && CAPX.Plugins.BackgroundGeolocation && CAPX.Plugins.BackgroundGeolocation.removeWatcher) {
+      await CAPX.Plugins.BackgroundGeolocation.removeWatcher({ id });
+    } else if (CAPX.nativePromise) {
+      await CAPX.nativePromise("BackgroundGeolocation", "removeWatcher", { id });
+    }
+  } catch (error) { /* survey-tjenesten tar over umiddelbart */ }
+}
+
 function startNativ() {
+  if (bgId) return;
   posSirkel.addTo(map); noySirkel.addTo(map);
   try {
     bgId = CAPX.nativeCallback("BackgroundGeolocation", "addWatcher", {
@@ -2516,36 +4990,130 @@ function hullTekst() {
 /* ============================================================
    11. Eksport
    ============================================================ */
-function lastNed(navn, innhold, type) {
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([innhold], { type }));
-  a.download = navn;
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+async function lastNed(navn, innhold, type, tittel, dialogTittel) {
+  if (!FILE_EXPORT || typeof FILE_EXPORT.saveFile !== "function") {
+    throw new Error("Eksportmodulen ble ikke lastet");
+  }
+  return FILE_EXPORT.saveFile({
+    capacitor: CAPX,
+    document,
+    urlApi: URL,
+    BlobCtor: Blob,
+    setTimeoutFn: setTimeout,
+    name: navn,
+    content: innhold,
+    type,
+    title: tittel,
+    dialogTitle: dialogTittel
+  });
 }
 
-function gpx() {
-  const esc = s => String(s || "").replace(/[<>&]/g, c => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]));
-  const wpt = merker.map(m =>
-    `  <wpt lat="${m.lat}" lon="${m.lng}"><time>${new Date(m.t).toISOString()}</time>` +
-    `<name>${esc(merkeInfo(m).navn)}${m.type === "funn" && m.kategori !== "sopp" && m.liter ? " " + m.liter + " l" : ""}</name>` +
-    `<desc>${esc(m.notat)}</desc></wpt>`)
-    .concat(bench.map(b =>
-      `  <wpt lat="${b.lat}" lon="${b.lng}"><time>${new Date(b.t0).toISOString()}</time>` +
-      `<name>Måling ${fmt1(rateLT(b))} l/t</name><desc>${b.liter} l, ${b.metode}, ${b.dist} m</desc></wpt>`))
-    .join("\n");
-  const trk = [...turer].sort((a, b) => (a.t0 || 0) - (b.t0 || 0)).filter(t => (t.spor || []).length).map(t => {
-    const navn = new Date(t.t0).toLocaleString("no-NO", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
-    const pts = t.spor.map(p => `      <trkpt lat="${p[0]}" lon="${p[1]}"><time>${new Date(p[2]).toISOString()}</time></trkpt>`).join("\n");
-    return `  <trk><name>Lyng ${esc(navn)}</name><trkseg>\n${pts}\n  </trkseg></trk>`;
-  }).join("\n");
-  lastNed(`lyng-${new Date().toISOString().slice(0, 10)}.gpx`,
-`<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="Lyng 3.4" xmlns="http://www.topografix.com/GPX/1/1">
-${wpt}
-${trk}
-</gpx>`, "application/gpx+xml");
+async function gpx() {
+  if (!FILE_EXPORT || typeof FILE_EXPORT.buildGpx !== "function") {
+    throw new Error("GPX-modulen ble ikke lastet");
+  }
+  const waypoints = merker.map(m => ({
+    lat: m.lat,
+    lon: m.lng,
+    time: m.t,
+    name: `${merkeInfo(m).navn}${m.type === "funn" && m.kategori !== "sopp" && m.liter ? ` ${m.liter} l` : ""}`,
+    description: m.notat
+  })).concat(bench.map(b => ({
+    lat: b.lat,
+    lon: b.lng,
+    time: b.t0,
+    name: `Måling ${fmt1(rateLT(b))} l/t`,
+    description: `${b.liter} l, ${b.metode}, ${b.dist} m`
+  })));
+  const tracks = [...turer]
+    .sort((a, b) => (a.t0 || 0) - (b.t0 || 0))
+    .filter(t => (t.spor || []).length)
+    .map(t => {
+    const dato = new Date(typeof t.t0 === "string" && /^\d+$/.test(t.t0) ? Number(t.t0) : t.t0);
+    const navn = Number.isFinite(dato.getTime())
+      ? dato.toLocaleString("no-NO", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
+      : "Ukjent tidspunkt";
+    return {
+      name: `Lyng ${navn}`,
+      points: t.spor.map(p => ({
+        lat: Array.isArray(p) ? p[0] : null,
+        lon: Array.isArray(p) ? p[1] : null,
+        time: Array.isArray(p) ? p[2] : null,
+        breakBefore: !!(Array.isArray(p) && p[5])
+      }))
+    };
+  });
+  const innhold = FILE_EXPORT.buildGpx({ creator: "Lyng 3.4", waypoints, tracks });
+  return lastNed(`lyng-${new Date().toISOString().slice(0, 10)}.gpx`,
+    innhold, "application/gpx+xml", "Lyng GPX", "Lagre eller del GPX-filen");
+}
+
+async function klargjorDataForEksport() {
+  // Web-punkter kan fremdeles stå i append-køen selv om knappen er trykket.
+  await surveySampleQueue;
+  if (surveyLifecycleDestructive) throw new Error("Survey-data endres akkurat nå — prøv igjen om litt");
+
+  const survey = aktivSurvey();
+  if (survey && surveyStore.kind === "native-sqlite") {
+    if (survey.surveyTransitioning || survey.surveyFinalizing) {
+      throw new Error("Bakgrunnssporingen skifter tilstand — prøv igjen om litt");
+    }
+    const reconciled = await avstemAktivSurveyNative(survey);
+    if (!reconciled || !reconciled.known) {
+      throw new Error("Siste bakgrunnsspor kunne ikke bekreftes");
+    }
+    if (survey === aktivSurvey() && reconciled.status !== "COMPLETED") {
+      await synkSurveyHelt(survey, survey.nativeLatestSequence);
+    }
+  }
+  await synkVentendeSurveyer();
+  if (turer.some(t => erSurvey(t) && t.nativeSyncPending)) {
+    throw new Error("Siste bakgrunnsspor kunne ikke synkroniseres");
+  }
+  await lagreNaStrict();
+}
+
+async function kjorEksport(knapp, eksporter) {
+  if (!knapp || knapp.disabled) return;
+  const gammelTekst = knapp.textContent;
+  knapp.disabled = true;
+  knapp.setAttribute("aria-busy", "true");
+  knapp.textContent = "Forbereder …";
+  melding("Forbereder eksport …", 3000);
+
+  let forberedelsesfeil = null;
+  try {
+    await klargjorDataForEksport();
+  } catch (error) {
+    // Eksport av dataene i minnet er ekstra viktig når enhetslagring feiler.
+    forberedelsesfeil = error;
+    console.warn("Lyng kunne ikke bekrefte alle data før eksport", error);
+  }
+
+  try {
+    const resultat = await eksporter();
+    if (resultat && resultat.method === "native-share") {
+      melding(forberedelsesfeil
+        ? "Filmenyen ble lukket. Ta vare på filen, men siste lagring kunne ikke bekreftes."
+        : "Filmenyen ble lukket — kontroller at filen ble lagret.", 5500);
+    } else {
+      melding(forberedelsesfeil
+        ? "Nedlasting startet. Ta vare på filen, men siste lagring kunne ikke bekreftes."
+        : "Nedlasting startet.", 4500);
+    }
+  } catch (error) {
+    console.error("Lyng-eksport feilet", error);
+    if (error && /cancel|avbrutt/i.test(String(error.message || error))) {
+      melding("Eksport avbrutt — ingen fil ble lagret.", 4000);
+      return;
+    }
+    const detalj = error && error.message ? `: ${error.message}` : "";
+    melding(`Kunne ikke eksportere${detalj}`, 6500);
+  } finally {
+    knapp.disabled = false;
+    knapp.removeAttribute("aria-busy");
+    knapp.textContent = gammelTekst;
+  }
 }
 
 /* ============================================================
@@ -2682,7 +5250,7 @@ document.getElementById("btnTaake").addEventListener("click", () => {
 });
 
 map.on("click", e => {
-  if (soneModus && soneModus.modus === "tegn") soneLeggTil(e.latlng.lat, e.latlng.lng);
+  if (soneModus && ["tegn", "ekskluder"].includes(soneModus.modus)) soneLeggTil(e.latlng.lat, e.latlng.lng);
 });
 function visMerkeArk(punkt) {
   const typer = [
@@ -2762,28 +5330,76 @@ function fyllLister() {
   for (const t of sortertTurer.slice(0, 30)) {
     const d = new Date(t.t0);
     const status = t.id === aktivTurId ? (t.status === "pauset" ? "Pauset" : "Pågår") : "Avsluttet";
+    const type = erSurvey(t) ? "Undersøkelse" : "Tur";
+    const surveyResultat = erSurvey(t) && t.statistics && t.statistics.coveragePercent != null
+      ? ` · ${Math.round(t.statistics.coveragePercent)} % dekket`
+      : "";
     const el = document.createElement("div");
     el.className = "el";
-    el.innerHTML = `<div class="info"><b>${status} · ${d.toLocaleDateString("no-NO", { day: "2-digit", month: "short" })}</b>
-      <small>${d.toLocaleTimeString("no-NO", { hour: "2-digit", minute: "2-digit" })} · ${fmtVarighet(turVarighet(t))} · ${fmt1((t.distanse || 0) / 1000)} km · ${(t.spor || []).length} GPS-pkt</small></div>
+    el.innerHTML = `<div class="info"><b>${status} ${type.toLowerCase()} · ${d.toLocaleDateString("no-NO", { day: "2-digit", month: "short" })}</b>
+      <small>${d.toLocaleTimeString("no-NO", { hour: "2-digit", minute: "2-digit" })} · ${fmtVarighet(turVarighet(t))} · ${fmt1((t.distanse || 0) / 1000)} km · ${(t.spor || []).length} GPS-pkt${surveyResultat}</small></div>
       <button>Vis</button><button class="fare">Slett</button>`;
     const [vis, slett] = el.querySelectorAll("button");
-    vis.onclick = () => {
+    vis.onclick = async () => {
       const a = aktivTur();
       if (a && a.id !== t.id) { melding("Avslutt aktiv tur før du viser en eldre tur"); return; }
       settVistTur(t.id, false);
+      if (erSurvey(t)) { sikreSurveyEngine(t); await beregnSurveyAvledet(t, false); }
+      else tegnSurveyLag(null);
+      if (!turer.includes(t) || String(visTurId || "") !== String(t.id)) return;
       document.getElementById("panel").classList.remove("apen");
       if ((t.spor || []).length) map.fitBounds(L.latLngBounds(t.spor.map(p => [p[0], p[1]])).pad(0.15), { maxZoom: 17 });
     };
-    slett.onclick = () => {
+    slett.onclick = async () => {
       if (t.id === aktivTurId) { melding("Avslutt turen før du sletter den"); return; }
-      if (!confirm("Slette denne turen og gålinjen? Undersøkt terreng, merker, soner og målinger beholdes.")) return;
-      turer = turer.filter(x => x.id !== t.id);
-      if (visTurId === t.id) {
-        const ny = sisteTur();
-        settVistTur(ny ? ny.id : null, false);
+      if (!confirm(erSurvey(t)
+        ? "Slette denne undersøkelsen, råsporet, survey-dekningen og tilhørende survey-funn? Målområdet og årets tåke beholdes."
+        : "Slette denne turen og gålinjen? Undersøkt terreng, merker, soner og målinger beholdes.")) return;
+      const surveyLifecycleLocked = erSurvey(t) && await begynnSurveyDestruktivLivssyklus();
+      if (erSurvey(t) && !surveyLifecycleLocked) {
+        melding("En annen survey-operasjon pågår — prøv igjen om litt", 3500);
+        return;
       }
-      lagreNa(); fyllLister(); oppdaterHud();
+      let unblockSurveySync = null;
+      try {
+        if (erSurvey(t)) {
+          try {
+          unblockSurveySync = await blokkerOgVentSurveySync(t);
+          await slettSurveyPersistensIdempotent(t);
+          } catch (error) {
+            melding("Kunne ikke slette undersøkelsen — ingen lokale data ble endret", 4200);
+            return;
+          }
+        }
+        turer = turer.filter(x => x.id !== t.id);
+        if (erSurvey(t)) {
+          surveyDerivedJobs.delete(String(t.id));
+          surveyEngineEpochs.delete(String(t.id));
+          surveyObservasjoner = surveyObservasjoner.filter(x => x.surveyId !== t.id);
+          surveyUtelukkelser = surveyUtelukkelser.filter(x => String(x.surveyId || "") !== String(t.id));
+          if (surveyEngineId === t.id) {
+            surveyEngine = null; surveyEngineId = null; surveyPreviousAccepted = null;
+          }
+        }
+        if (visTurId === t.id) {
+          const ny = sisteTur();
+          settVistTur(ny ? ny.id : null, false);
+        }
+        surveyHoleCandidates = []; surveyHoleIndex = -1; surveyHjelpLag.clearLayers();
+        const shown = vistTur();
+        if (erSurvey(shown)) {
+          surveyEngine = null; surveyEngineId = null; surveyPreviousAccepted = null;
+          await beregnSurveyAvledet(shown, false);
+        } else tegnSurveyLag(null);
+        try { await lagreNaStrict(); }
+        catch (saveError) {
+          melding("Dataene er slettet, men oversikten kunne ikke lagres på enheten", 5000);
+        }
+        fyllLister(); oppdaterHud();
+      } finally {
+        if (unblockSurveySync) unblockSurveySync();
+        if (surveyLifecycleLocked) avsluttSurveyDestruktivLivssyklus();
+      }
     };
     tl.appendChild(el);
   }
@@ -2842,7 +5458,35 @@ async function importer(tekst) {
   const nyMerker = (d.merker || []).map(normaliserMerke).filter(Boolean);
   const nySoner = (d.soner || []).filter(x => x && Array.isArray(x.pkt) && x.pkt.length > 2);
   const nyBench = (d.bench || []).filter(x => x && x.t0 && typeof x.liter === "number");
+  const nySurveyObservasjoner = (d.surveyObservasjoner || []).filter(x => x && x.id && x.surveyId && Number.isFinite(+x.lat) && Number.isFinite(+x.lng));
+  const nySurveyUtelukkelser = (d.surveyUtelukkelser || [])
+    .map(x => normaliserSurveyEksklusjon(x)).filter(Boolean);
   let nyTurer = (d.turer || []).map(normaliserTur).filter(Boolean);
+  const importedAreasById = new Map(nySoner.map(area => [String(area.id), area]));
+  for (const survey of nyTurer.filter(t => erSurvey(t) && !t.targetGeometry && t.areaId)) {
+    const sourceArea = importedAreasById.get(String(survey.areaId));
+    if (!sourceArea) continue;
+    survey.targetGeometry = SURVEY.polygonFromLatLngs(
+      window.turf, sourceArea.pkt, { id: sourceArea.id, name: sourceArea.navn }
+    );
+    survey.targetName = String(sourceArea.navn || "");
+    survey.targetSnapshotAt = Math.max(0, +survey.targetSnapshotAt || +survey.t0 || Date.now());
+  }
+  for (const survey of nyTurer.filter(erSurvey)) {
+    const existing = new Set((survey.targetExclusions || []).map(x => x.id));
+    for (const imported of nySurveyUtelukkelser) {
+      const belongsToSurvey = imported.surveyId && String(imported.surveyId) === String(survey.id);
+      const belongsToLegacyArea = Math.max(0, +d.schemaVersion || 0) < 42 &&
+        !imported.surveyId && survey.areaId &&
+        String(imported.surveyAreaId || "") === String(survey.areaId);
+      if (!belongsToSurvey && !belongsToLegacyArea) continue;
+      const snapshot = normaliserSurveyEksklusjon(imported, survey.id, survey.areaId);
+      if (snapshot && !existing.has(snapshot.id)) {
+        survey.targetExclusions.push(snapshot);
+        existing.add(snapshot.id);
+      }
+    }
+  }
   if (!nyTurer.length && Array.isArray(d.spor) && d.spor.length) {
     const t0 = +(d.spor[0][2] || Date.now());
     nyTurer = [{
@@ -2865,7 +5509,7 @@ async function importer(tekst) {
       for (const k of arr) cellePoster.push([k, +aar, DEKNING.undersokt]);
   }
 
-  if (!nyMerker.length && !nySoner.length && !nyBench.length && !nyTurer.length && !cellePoster.length) {
+  if (!nyMerker.length && !nySoner.length && !nyBench.length && !nyTurer.length && !cellePoster.length && !nySurveyObservasjoner.length && !nySurveyUtelukkelser.length) {
     melding("Fant ingen data i fila"); return;
   }
 
@@ -2888,7 +5532,7 @@ async function importer(tekst) {
   const celleInfo = cellePoster.length
     ? (importerCeller ? `${cellePoster.length} dekningsruter` : `${cellePoster.length} dekningsruter HOPPES OVER (annet rutenett)`)
     : "ingen dekningsruter";
-  if (!confirm(`Importere ${nyTurer.length} turer, ${nyMerker.length} merker, ${nySoner.length} soner, ${nyBench.length} målinger og ${celleInfo}?\n\nDet du har fra før beholdes.`)) return;
+  if (!confirm(`Importere ${nyTurer.length} turer/undersøkelser, ${nyMerker.length} merker, ${nySurveyObservasjoner.length} survey-funn, ${nySoner.length} soner, ${nyBench.length} målinger og ${celleInfo}?\n\nDet du har fra før beholdes.`)) return;
 
   if (adopterGeometri) {
     S.grid = kildeGrid;
@@ -2914,13 +5558,36 @@ async function importer(tekst) {
   }
 
   const tId = new Set(turer.map(x => x.id));
+  const addedSurveyIds = new Set();
   for (const x0 of nyTurer) {
     if (tId.has(x0.id)) continue;
     const x = { ...x0 };
+    if (erSurvey(x) && !x.targetGeometry && x.areaId) settSurveyMaal(x, x.areaId, true);
     // En import skal aldri starte bakgrunnssporing ved et uhell.
     if (!x.t1) x.t1 = (x.spor && x.spor.length ? +x.spor[x.spor.length - 1][2] : Date.now());
     x.status = "avsluttet";
+    if (erSurvey(x)) {
+      // SQLite-rader er enhetsspesifikke og følger ikke JSON-backupen.
+      x.nativeSessionCreated = false;
+      x.nativeSyncPending = false;
+      x.nativeLatestSequence = 0;
+      x.nativeStateRevision = 0;
+      x.nativeCursor = 0;
+    }
     turer.push(x); tId.add(x.id);
+    if (erSurvey(x)) addedSurveyIds.add(String(x.id));
+  }
+
+  const observationIds = new Set(surveyObservasjoner.map(x => x.id));
+  for (const observation of nySurveyObservasjoner) if (!observationIds.has(observation.id)) {
+    surveyObservasjoner.push(observation); observationIds.add(observation.id);
+  }
+  const exclusionIds = new Set(surveyUtelukkelser.map(x => x.id));
+  for (const exclusion of nySurveyUtelukkelser) if (
+    exclusion.surveyId && addedSurveyIds.has(String(exclusion.surveyId)) &&
+    !exclusionIds.has(exclusion.id)
+  ) {
+    surveyUtelukkelser.push(exclusion); exclusionIds.add(exclusion.id);
   }
 
   if (importerCeller) for (const [k, aar, nivaa] of cellePoster) settCelleNivaa(k, aar, nivaa);
@@ -2949,26 +5616,185 @@ document.getElementById("btnImport").addEventListener("click", () => {
   inp.click();
 });
 
-document.getElementById("btnGpx").addEventListener("click", gpx);
-document.getElementById("btnBackup").addEventListener("click", () =>
-  lastNed(`lyng-backup-${new Date().toISOString().slice(0, 10)}.json`, pakk(), "application/json"));
-document.getElementById("btnNullstillSpor").addEventListener("click", () => {
+const btnGpx = document.getElementById("btnGpx");
+const btnBackup = document.getElementById("btnBackup");
+btnGpx.addEventListener("click", () => kjorEksport(btnGpx, gpx));
+btnBackup.addEventListener("click", () => kjorEksport(btnBackup, () =>
+  lastNed(
+    `lyng-backup-${new Date().toISOString().slice(0, 10)}.json`,
+    pakk(),
+    "application/json",
+    "Lyng sikkerhetskopi",
+    "Lagre eller del sikkerhetskopien"
+  )));
+document.getElementById("btnNullstillSpor").addEventListener("click", async () => {
   const t = vistTur();
   if (!t) { melding("Ingen gålinje å slette"); return; }
-  if (!confirm("Slette gålinjen og distansen for turen som vises? Undersøkt terreng, merker, soner og målinger beholdes.")) return;
-  t.spor = []; t.distanse = 0;
-  if (t.id === aktivTurId) nullstillAktivitetsfilter();
-  settVistTur(t.id, false);
-  sporLinje.setLatLngs([]); lagreNa(); oppdaterHud(); fyllLister();
+  if (t.id === aktivTurId) { melding("Fullfør aktiv tur eller undersøkelse før sporet slettes"); return; }
+  if (!confirm(erSurvey(t)
+    ? "Slette råspor, gålinje og avledet survey-dekning? Survey-funn, målområde og årets tåke beholdes."
+    : "Slette gålinjen og distansen for turen som vises? Undersøkt terreng, merker, soner og målinger beholdes.")) return;
+  const surveyLifecycleLocked = erSurvey(t) && await begynnSurveyDestruktivLivssyklus();
+  if (erSurvey(t) && !surveyLifecycleLocked) {
+    melding("En annen survey-operasjon pågår — prøv igjen om litt", 3500);
+    return;
+  }
+  let unblockSurveySync = null;
+  try {
+    if (erSurvey(t)) {
+      try {
+        unblockSurveySync = await blokkerOgVentSurveySync(t);
+        await slettSurveyRaadataIdempotent(t);
+      } catch (error) {
+        melding("Kunne ikke slette råsporet — ingen lokale data ble endret", 4200);
+        return;
+      }
+      t.surveyPoints = [];
+      t.surveyPointsBaseCount = 0;
+      t.coverageAnchor = null;
+      t.coverageCache = null;
+      t.nativeCursor = 0;
+      t.nativeLatestSequence = 0;
+      t.nativeSyncPending = false;
+      t.rawSampleCount = 0;
+      t.rejectedSampleCount = 0;
+      t.lastQuality = null;
+      t.lastAccuracy = null;
+      t.statistics = {};
+      t.ignoredHoleIds = [];
+      surveyEngine = null; surveyEngineId = null; surveyPreviousAccepted = null;
+      surveyHoleCandidates = []; surveyHoleIndex = -1; surveyHjelpLag.clearLayers();
+    }
+    t.spor = []; t.distanse = 0;
+    if (erSurvey(t)) tegnSurveyLag(t, null);
+    if (t.id === aktivTurId) nullstillAktivitetsfilter();
+    settVistTur(t.id, false);
+    sporLinje.setLatLngs([]);
+    try { await lagreNaStrict(); }
+    catch (saveError) {
+      melding("Rådataene er slettet, men oversikten kunne ikke lagres på enheten", 5000);
+    }
+    oppdaterHud(); fyllLister();
+  } finally {
+    if (unblockSurveySync) unblockSurveySync();
+    if (surveyLifecycleLocked) avsluttSurveyDestruktivLivssyklus();
+  }
 });
 document.getElementById("btnNullstillAlt").addEventListener("click", async () => {
   if (!confirm("Slette ALT — tåke, turer, merker, soner og målinger? Kan ikke angres.")) return;
-  celler.clear(); merker = []; soner = []; bench = []; turer = []; aktivTurId = null; visTurId = null;
-  spor = []; distanse = 0; sisteFix = null; hull = []; gpsVindu = []; sporTilstand = "ukjent";
-  sporLinje.setLatLngs([]);
-  await lagreNa();
-  tegnMerker(); tegnSoner(); taake.tegn(); oppdaterHud(); fyllAar(); fyllLister(); oppdaterTurUI();
-  melding("Alt slettet");
+  const surveyLifecycleLocked = await begynnSurveyDestruktivLivssyklus();
+  if (!surveyLifecycleLocked) {
+    melding("En annen survey-operasjon pågår — prøv igjen om litt", 3500);
+    return;
+  }
+  const surveys = turer.filter(erSurvey);
+  const activeSurvey = aktivSurvey();
+  const unblockers = [];
+  let stoppedState = null;
+  try {
+    try {
+    const blockedIds = new Set();
+    for (const survey of surveys) {
+      unblockers.push(await blokkerOgVentSurveySync(survey));
+      blockedIds.add(String(survey.id));
+    }
+    if (surveyStore.kind === "native-sqlite") {
+      // Full reset må også oppdage terminale SQLite-økter som mistet sitt
+      // hovedstate-snapshot før WebView-en døde.
+      const states = await surveyStore.listSessions();
+      for (let state of states) {
+        const sessionId = String(state.sessionId || state.surveyId || state.id || "");
+        if (!sessionId) throw new Error("Native survey mangler sessionId");
+        let survey = surveys.find(x => String(x.id) === sessionId);
+        if (!survey) {
+          // En native økt kan finnes selv om UI-snapshotet aldri ble lagret.
+          survey = { id: sessionId, kind: "survey", nativeSessionCreated: true };
+          surveys.push(survey);
+        }
+        if (!blockedIds.has(sessionId)) {
+          unblockers.push(await blokkerOgVentSurveySync(survey));
+          blockedIds.add(sessionId);
+        }
+        if (String(state.status || "").toUpperCase() !== "COMPLETED") {
+          try {
+            const stopped = await surveyStore.stop({ surveyId: sessionId, endedAt: Date.now() });
+            state = nativeSurveyState(stopped) || stopped;
+          } catch (stopError) {
+            state = nativeSurveyState(await surveyStore.getState({ surveyId: sessionId }));
+          }
+        }
+        if (String((state && state.status) || "").toUpperCase() !== "COMPLETED") {
+          throw new Error("Native survey kunne ikke stoppes");
+        }
+        if (activeSurvey && sessionId === String(activeSurvey.id)) stoppedState = state;
+      }
+    }
+    } catch (error) {
+      if (activeSurvey && stoppedState) {
+        avstemSurveyPauseFraNative(activeSurvey, stoppedState);
+        activeSurvey.t1 = +(stoppedState.endedAt || stoppedState.updatedAt) || Date.now();
+        activeSurvey.status = "avsluttet";
+        activeSurvey.surveyStatus = "COMPLETED";
+        activeSurvey.surveyFinalizing = false;
+        activeSurvey.nativeSessionCreated = true;
+        activeSurvey.nativeSyncPending = true;
+        aktivTurId = null; visTurId = activeSurvey.id;
+        await lagreNa();
+      }
+      melding(stoppedState
+        ? "Bakgrunnssporingen ble stoppet, men ingen lagrede data ble slettet"
+        : "Kunne ikke stoppe bakgrunnssporingen — ingenting ble slettet", 5000);
+      return;
+    }
+
+    try {
+      for (const survey of surveys) {
+        await slettSurveyPersistensIdempotent(survey);
+        survey.nativeSessionCreated = false;
+        survey.nativeSyncPending = false;
+      }
+    } catch (error) {
+      if (activeSurvey && stoppedState) {
+        let remainingState = null;
+        let stateReadSucceeded = false;
+        if (surveyStore.kind === "native-sqlite") {
+          try {
+            remainingState = nativeSurveyState(await surveyStore.getState({ surveyId: activeSurvey.id }));
+            stateReadSucceeded = true;
+          } catch (ignored) { /* behold konservativ gjenopprettingsmarkør */ }
+        }
+        avstemSurveyPauseFraNative(activeSurvey, remainingState || stoppedState);
+        activeSurvey.t1 = +((remainingState || stoppedState).endedAt || (remainingState || stoppedState).updatedAt) || Date.now();
+        activeSurvey.status = "avsluttet";
+        activeSurvey.surveyStatus = "COMPLETED";
+        activeSurvey.surveyFinalizing = false;
+        activeSurvey.nativeSessionCreated = stateReadSucceeded ? !!remainingState : true;
+        activeSurvey.nativeSyncPending = stateReadSucceeded ? !!remainingState : true;
+        if (remainingState) {
+          activeSurvey.nativeLatestSequence = Math.max(0, +remainingState.latestSequence || 0);
+        }
+        aktivTurId = null; visTurId = activeSurvey.id;
+        await lagreNa();
+      }
+      melding("Bakgrunnssporingen er stoppet, men ikke alle lagrede surveydata kunne slettes", 5500);
+      return;
+    }
+    celler.clear(); merker = []; soner = []; bench = []; turer = []; surveyObservasjoner = []; surveyUtelukkelser = []; aktivTurId = null; visTurId = null;
+    surveyDerivedJobs.clear(); surveyEngineEpochs.clear();
+    spor = []; distanse = 0; sisteFix = null; hull = []; gpsVindu = []; sporTilstand = "ukjent";
+    surveyEngine = null; surveyEngineId = null; surveyHjelpLag.clearLayers(); tegnSurveyLag(null);
+    sporLinje.setLatLngs([]);
+    try { await lagreNaStrict(); }
+    catch (saveError) {
+      melding("Dataene er slettet, men den tomme oversikten kunne ikke lagres på enheten", 5500);
+      return;
+    }
+    tegnMerker(); tegnSoner(); taake.tegn(); oppdaterHud(); fyllAar(); fyllLister(); oppdaterTurUI();
+    melding("Alt slettet");
+  } finally {
+    for (const unblock of unblockers) unblock();
+    avsluttSurveyDestruktivLivssyklus();
+  }
 });
 
 function fyllAar() {
@@ -2986,6 +5812,8 @@ function fyllAar() {
 /* ---- oppstart ---- */
 (async function oppstart() {
   await lastInn();
+  await synkVentendeSurveyer();
+  await gjenopprettSurveySession();
   settGrunnkart(S.lag, false);
   oppdaterTemalag();
   if (!MANUELLE_MODUSER.includes(S.sporModus)) S.sporModus = "auto";
@@ -3007,6 +5835,18 @@ function fyllAar() {
   kobleValg("setRadius", "radius");
   kobleValg("setWalkRadius", "walkRadius");
   kobleValg("setAcc", "acc");
+  kobleValg("setSurveyHistory", "surveyHistorikk", () => {
+    const t = aktivSurvey() || (erSurvey(vistTur()) ? vistTur() : null);
+    if (t) beregnSurveyAvledet(t, false);
+  });
+  kobleValg("setSurveyHole", "surveyHoleArea", () => {
+    surveyHoleCandidates = []; surveyHoleIndex = -1; surveyHjelpLag.clearLayers();
+    const t = aktivSurvey() || (erSurvey(vistTur()) ? vistTur() : null);
+    // Hullgrensen er et rent derive-valg. Coverage-motoren og en eventuell
+    // bulk-replay må derfor beholdes urørt mens statistikken beregnes på nytt.
+    if (t) beregnSurveyAvledet(t, false);
+  });
+  kobleValg("setSurveyHaptics", "surveyHaptics");
   kobleValg("setWake", "wake", () => settWake(S.wake === 1));
   kobleValg("setSpar", "spar");
   document.getElementById("setBg").value = String(S.bg);
@@ -3031,6 +5871,8 @@ function fyllAar() {
   tegnMerker();
   tegnSoner();
   if (S.track) tegnSpor();
+  const recoveredSurvey = aktivSurvey();
+  if (recoveredSurvey) beregnSurveyAvledet(recoveredSurvey, false);
   if (spor.length) map.setView([spor[spor.length - 1][0], spor[spor.length - 1][1]], 15);
   document.getElementById("btnTaake").classList.toggle("pa", S.fog === 1);
   document.getElementById("taakeVerdi").textContent = S.fog ? "På" : "Av";
