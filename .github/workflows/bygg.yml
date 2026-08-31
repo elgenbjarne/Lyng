@@ -40,27 +40,13 @@ jobs:
       - name: Godta Android-lisenser
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
 
-      # Uten fast nøkkel får hvert bygg ny signatur, og da nekter Android
-      # å installere oppdateringen over den forrige. Første bygg lager
-      # nøkkelen og legger den i repoet; senere bygg gjenbruker den.
-      - name: Fast signeringsnøkkel
+      # Nøkkelen er versjonert fordi Android krever samme signatur ved hver
+      # oppdatering. klargjor.mjs kobler debug-bygget eksplisitt til denne.
+      - name: Kontroller fast signeringsnøkkel
         run: |
-          if [ ! -f verktoy/debug.keystore ]; then
-            echo "Lager signeringsnøkkel for første gang"
-            mkdir -p verktoy
-            keytool -genkeypair -v \
-              -keystore verktoy/debug.keystore \
-              -storepass android -keypass android \
-              -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 20000 \
-              -dname "CN=Lyng, O=Lyng, C=NO"
-            git config user.name "github-actions"
-            git config user.email "actions@github.com"
-            git add -f verktoy/debug.keystore
-            git commit -m "Fast signeringsnokkel for appbygg"
-            git push
-          fi
-          mkdir -p ~/.android
-          cp verktoy/debug.keystore ~/.android/debug.keystore
+          test -f verktoy/debug.keystore
+          keytool -list -keystore verktoy/debug.keystore \
+            -storepass android -alias androiddebugkey > /dev/null
 
       - name: Installer avhengigheter
         run: npm ci
@@ -89,6 +75,19 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew testDebugUnitTest lintDebug assembleDebug --no-daemon
+
+      - name: Kontroller fast app-signatur
+        run: |
+          forventet=$(keytool -list -v \
+            -keystore verktoy/debug.keystore -storepass android -alias androiddebugkey \
+            | awk '/SHA256:/{print $2; exit}')
+          faktisk=$(keytool -printcert \
+            -jarfile android/app/build/outputs/apk/debug/app-debug.apk \
+            | awk '/SHA256:/{print $2; exit}')
+          echo "Forventet SHA-256: $forventet"
+          echo "Faktisk SHA-256:  $faktisk"
+          test -n "$forventet"
+          test "$forventet" = "$faktisk"
 
       - name: Legg APK-en ut for nedlasting
         env:

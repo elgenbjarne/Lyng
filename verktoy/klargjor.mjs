@@ -1,6 +1,6 @@
 /* Kjøres i GitHub Actions etter «npx cap add android».
    Setter varseltekst, ikon og versjonsnummer på Android-prosjektet. */
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 
 const RES = "android/app/src/main/res";
 const bygg = process.env.BYGG || "1";
@@ -41,5 +41,29 @@ const forKode = g.match(/versionCode\s+\d+/);
 const forNavn = g.match(/versionName\s+"[^"]*"/);
 g = g.replace(/versionCode\s+\d+/, `versionCode ${bygg}`);
 g = g.replace(/versionName\s+"[^"]*"/, `versionName "${versjonsserie}.${bygg}"`);
+
+/* 4. Knytt debug-bygget eksplisitt til den versjonerte nøkkelen. Å kopiere
+      nøkkelen til ~/.android er ikke tilstrekkelig på alle CI-runnere: Gradle
+      kan ellers opprette en ny nøkkel, og Android nekter neste oppdatering. */
+const nokkelSti = "verktoy/debug.keystore";
+if (!existsSync(nokkelSti)) throw new Error(`Mangler fast signeringsnøkkel: ${nokkelSti}`);
+if (!g.includes("signingConfigs.lyngDebug")) {
+  const buildTypes = "    buildTypes {";
+  if (!g.includes(buildTypes)) throw new Error("Fant ikke buildTypes i android/app/build.gradle");
+  g = g.replace(buildTypes,
+`    signingConfigs {
+        lyngDebug {
+            storeFile rootProject.file('../verktoy/debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+        }
+    }
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.lyngDebug
+        }`);
+}
 writeFileSync(gSti, g);
 console.log(`versjon: ${forKode?.[0]} -> versionCode ${bygg}, ${forNavn?.[0]} -> "${versjonsserie}.${bygg}"`);
+console.log("debug-signering: verktoy/debug.keystore");
